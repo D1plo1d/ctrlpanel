@@ -32,27 +32,29 @@ class Beacon
     @$video.attr
       src: if (window.webkitURL) then window.webkitURL.createObjectURL(stream) else stream
       autoplay: true
+    @rescale()
     requestAnimationFrame(@tick)
 
-  computePosition: =>
+  rescale: ->
     # Rescaling the canvas to match the video frame
     @size = width: @$video.width(), height: @$video.height()
     @$canvas.attr @size
+
+  computePosition: =>
     # copying the video to the canvas for cv inspection
-    @context.drawImage @$video[0], 0, 0, @$canvas.width(), @$canvas.height()
-    imageData = @context.getImageData 0, 0, @$canvas.width(), @$canvas.height()
+    @context.drawImage @$video[0], 0, 0, @size.width, @size.height
+    imageData = @context.getImageData 0, 0, @size.width, @size.height
     # running cv
     arMarkers = @detector.detect imageData
     return unless arMarkers.length > 0
-    console.log arMarkers
-    console.log arMarkers[0]
+
     # centering the corner markers about the middle of the canvas
     for c in arMarkers[0].corners
       c.x = c.x - @size.width/2
       c.y = @size.height/2 - c.y
   
     # returning a pose
-    console.log arMarkers[0].corners
+    #console.log arMarkers[0].corners
     pose = @posit.pose arMarkers[0].corners
     rotationMatrix = pose.bestRotation
 
@@ -60,6 +62,9 @@ class Beacon
     @rotation.y = -Math.atan2(rotationMatrix[0][2], rotationMatrix[2][2])
     @rotation.z = Math.atan2(rotationMatrix[1][0], rotationMatrix[1][1])
     @translation = pose.bestTranslation
+
+    console.log @translation
+    console.log "x: #{@translation[0]}, y: #{@translation[1]}, z: #{@translation[2]}"
 
     @$video.trigger "orientation:change", @
 

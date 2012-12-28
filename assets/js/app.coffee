@@ -137,8 +137,10 @@ $ ->
         0.5, 0.5, 1, 1,
         0.5, 0.5, 1, 1
       ]
-    @square.scale.set qrCodeWidth, qrCodeWidth, 2
-    #@square.scale.set 25, 25, 2 # not sure why this scale works but it does (something to do with px vs mm perhaps?)
+    #@square.scale.set qrCodeWidth, qrCodeWidth, 2
+    @square.scale.set 25, 25, 2 # not sure why this scale works but it does (something to do with px vs mm perhaps?)
+    @square.drawType = @gl.LINES
+    console.log @square
 
   initWebGl = => PhiloGL $glCanvas.attr("id"),
     program:
