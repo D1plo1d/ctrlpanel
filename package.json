@@ -11,6 +11,10 @@
     , "nib": "0.4.1"
     , "markdown": "0.3.1"
     , "which": "*"
+    , "sugar": "*"
+    , "longjohn": "*"
+    , "restler": "*"
+    , "redback": "*"
   }, "scripts": {
     "install": "node node_modules/coffee-script/bin/cake build",
     "start": "node server.js",

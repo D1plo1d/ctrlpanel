@@ -1,0 +1,21 @@
+
+express - web server api
+passport - oauth
+node_redis - db
+
+
+/index.jade
+/_manual_ctrl.jade
+/_print_queue.jade
+
+backbone.js, sugar.js, zepto.js, bootstrap.js
+
+bootstrap.css
+
+https://github.com/kliment/Printrun/blob/master/printrun/webinterface.py
+
+custom components
+------------------
+
+- a carrierwave-like file uploader
+  - takes a file, stores it in a unique location, returns all original file names and locations of a request as a hash

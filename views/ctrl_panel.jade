@@ -1,0 +1,118 @@
+mixin title(title, icon)
+  h4
+    a.pull-right(href='#')
+      i.icon-chevron-right
+    i(class= icon)
+    span.title= title
+
+mixin jog_panel(axis, icon, directions)
+  .jog-panel(data-axis= axis)
+    h4
+      a.pull-right(href='#')
+        i.icon-chevron-right
+      .subtitle.pull-right
+      i(class= icon)
+      span.title #{axis.toUpperCase()} Jog
+    .directional-pad
+      - each data, direction in directions
+        .btn.btn-large(class='btn-#{direction}', data-direction=data[1], data-axis=data[0])
+          i(class='icon-arrow-#{direction}')
+    .settings-popover.hide
+      .form
+        .control-group
+          .control-label Distance
+          .controls.input-append
+            input.jog-distance(type='text', value=1)
+            span.add-on mm
+        .control-group
+          .control-label Movement Speed
+          .controls.input-append
+            input.jog-speed(type='text', value=1)
+            span.add-on mm/s
+
+mixin extruders_panel
+  .extruders-panel
+    mixin title("Extruders", "icon-tint")
+    each extruder in ["PLA Extruder", "ABS Extruder"]
+      .side-row
+        .btn.pull-right Start
+        .subtitle.pull-right
+        .title= extruder
+    
+    .settings-popover.hide
+      .control-group
+        each extruder in ["PLA Extruder", "ABS Extruder"]
+          .control-label= extruder
+          .controls.input-append
+            input(type='text', value=0)
+            span.add-on mm
+          .controls.input-append
+            input(type='text', value=0)
+            span.add-on mm/s
+
+mixin temperature_panel
+  .temperature-panel
+    mixin title("Temperature Control", "icon-bar-chart")
+    each extruder in ["PLA Extruder", "ABS Extruder", "Platform"]
+      .side-row
+        .toggle-btn.pull-right
+          input(type="checkbox")
+        .subtitle.pull-right 178 / 180&degC
+        .title= extruder
+    
+    .settings-popover.hide
+      .control-group
+        each extruder in ["PLA Extruder", "ABS Extruder", "Platform"]
+          .control-label= extruder
+          .controls.input-append
+            input(type='text', value=0)
+            span.add-on &deg;C
+
+mixin more
+  .more-manual-panel
+    mixin title("More", "icon-bar-chart")
+  
+    .settings-popover.hide
+      .control-group
+        each extruder in ["PLA Extruder", "ABS Extruder", "Build Platform"]
+          .control-label= extruder
+          .controls.input-append
+            input(type='text', value=0)
+            span.add-on &deg;C
+
+.row
+  .span3.side-panel
+    mixin jog_panel("xy", "icon-fullscreen", {up: ['y', -1], left: ['x', -1], right: ['x', +1], down: ['y', +1]})
+    mixin jog_panel("z", "icon-resize-vertical", {up: ['z', -1], down: ['z', +1]})
+    mixin temperature_panel
+    mixin extruders_panel
+  .span9.canvas-container
+    canvas
+    video
+  - //TODO: fan, conveyor, home
+
+
+script(id="shader-fs", type="x-shader/x-fragment").
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  varying vec4 vColor;
+
+  void main(void) {
+    gl_FragColor = vColor;
+  }
+
+script(id="shader-vs", type="x-shader/x-vertex").
+  attribute vec3 aVertexPosition;
+  attribute vec4 aVertexColor;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  varying vec4 vColor;
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    vColor = aVertexColor;
+  }

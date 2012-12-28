@@ -1,0 +1,105 @@
+.directional-pad
+  width: 57*3px
+  margin-left: auto
+  margin-right: auto
+
+  .btn-up, .btn-down
+    margin-left: 57px
+    margin-right: 57px
+
+  .btn-down
+    clear:both
+
+  .btn-left
+    float: left
+
+  .btn-right
+    float: right
+
+  .btn-down:nth-child(2)
+    margin-top: 20px
+
+.side-panel
+
+  .jog-panel:first-child
+    h4
+      margin-top: 0px
+
+  .subtitle
+    margin-right: 9px
+    color: #999
+
+  h4
+    margin-top: 24px
+    margin-bottom: 18px
+
+    .subtitle
+      margin-top: 1px
+      font-weight: 300
+      margin-right: 15px
+      font-size: 15px
+
+    i
+      margin-right: 3px
+
+    a
+      margin-right: 0px
+      &:hover
+        text-decoration: none
+
+.side-row
+  clearfix()
+  margin-bottom: 12px + 5px
+  &:first-child
+    margin-top: 5px
+
+  .btn, .toggle-btn
+    margin-right: 0px
+    margin-top: -5px
+
+#manual_ctrl
+  .canvas-container
+    background black
+    margin-bottom 10px
+
+  .side-panel .popover
+    width auto
+
+  .jog-panel:nth-child(1) .popover.right
+    margin-top 40px
+    .arrow
+      top 48px
+
+// TODO: This needs to be moved or deleted
+.console-panel
+  //height: 255px - 20px
+  display -webkit-flex
+  -webkit-flex-flow column
+
+  .console-history
+    -webkit-flex 1 1 auto
+    overflow-y: scroll
+    background-color white
+    border 1px solid #CCC
+    box-shadow inset 0 1px 1px rgba(0, 0, 0, 0.075)
+    padding: 5px
+
+.console-form
+  width: 100%
+  display -webkit-flex
+  -webkit-flex-flow row
+
+  input
+    -webkit-flex 1 1 auto
+    margin-bottom 0px
+    margin-right 10px
+
+
+.canvas-container
+  video
+    width: 100%
+  canvas.textureCanvas, canvas.frameCaptureCanvas
+    opacity: 0
+    position: absolute
+    left: -100000px
+    top: 0px
