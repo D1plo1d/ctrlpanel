@@ -40,10 +40,15 @@ class Beacon
     @size = width: @$video.width(), height: @$video.height()
     @$canvas.attr @size
 
-  computePosition: =>
-    # copying the video to the canvas for cv inspection
+  # copies the video to the canvas for cv inspection. This is unfortunately a hugely time consuming way of doing things.
+  snapshot: ->
     @context.drawImage @$video[0], 0, 0, @size.width, @size.height
-    imageData = @context.getImageData 0, 0, @size.width, @size.height
+    # This data-only hack works wonders with v8 ("self" cpu time down from 39.57% to 14.33% for this function).
+    return data: @context.getImageData(0, 0, @size.width, @size.height).data
+
+  computePosition: =>
+    imageData = @snapshot()
+
     # running cv
     arMarkers = @detector.detect imageData
     return unless arMarkers.length > 0
@@ -69,6 +74,11 @@ class Beacon
     @$video.trigger "orientation:change", @
 
   tick: =>
+    timestamp = new Date().getTime()
+    @fps = 1000/(timestamp - p) if (p = @previousTickTimestamp)?
+    @previousTickTimestamp = timestamp
+    #console.log "#{@fps} fps"
+
     requestAnimationFrame(@tick)
 
     # run CV if the video has started playback from the camera
