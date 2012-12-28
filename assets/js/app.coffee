@@ -20,18 +20,10 @@ $ ->
   $sidePanelLinks = $("#manual_ctrl .side-panel h4 a")
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
-  # Canvas resizing
-  $canvas = $("#manual_ctrl .canvas-container")
-  $canvas.height( $(".content").innerHeight() - parseInt( $canvas.css "margin-bottom" ) )
-
-  # Canvas AR/Agumented Reality Option
-  qrCodeWidth = 50# mm
-
-  console.log "ar?"
-  detector = new AR.Detector()
-  $video = $("video")
-  $canvas = $("canvas").addClass("frameCaptureCanvas")
-  context = $canvas[0].getContext("2d")
+  # initializing qr code tracking
+  $video = $("video").beacon qr: {metricWidth: 35.0}
+  # updating the model orientation
+  $video.on 'orientation:change', (e, o) => drawScene() if (@orientation = o)?
 
 
   # Texture and UV canvas (gcode layers)
@@ -60,7 +52,7 @@ $ ->
       textureCtx.lineTo(axes.x*100, axes.y*100) if axes.x? and axes.y?
 
   textureCtx.stroke()
-  $('body').prepend $textureCanvas
+  #$('body').prepend $textureCanvas
 
 
   # WebGL overlay
@@ -90,19 +82,20 @@ $ ->
   #drawScene = =>
   window.drawScene = =>
     # Resize
-    console.log @size
+    console.log @orientation.size
+    @size = @orientation.size
     $glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)
-    @camera.aspect = @canvas.width / @canvas.height
+    @camera.aspect = @size.width / @size.height
     @camera.update()
 
     # Clear Screen
     @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
 
     # Draw Square
-    if @qrPosition?
-      translation = @qrPosition.translation
-      rotation = @qrPosition.rotation
+    if @orientation?
+      translation = @orientation.translation
+      rotation = @orientation.rotation
       @square.position.set(translation[0], translation[1], -translation[2])
       @square.rotation.set(rotation.x, rotation.y, rotation.z)
     else
@@ -144,8 +137,8 @@ $ ->
         0.5, 0.5, 1, 1,
         0.5, 0.5, 1, 1
       ]
-    #@square.scale.set qrCodeWidth, qrCodeWidth, 2
-    @square.scale.set 25, 25, 2 # not sure why this scale works but it does (something to do with px vs mm perhaps?)
+    @square.scale.set qrCodeWidth, qrCodeWidth, 2
+    #@square.scale.set 25, 25, 2 # not sure why this scale works but it does (something to do with px vs mm perhaps?)
 
   initWebGl = => PhiloGL $glCanvas.attr("id"),
     program:
@@ -153,7 +146,7 @@ $ ->
       vs: 'shader-vs'
       fs: 'shader-fs'
     camera:
-      fov:  90 # TODO: wut? why does this work? Shouldn't this should be 40? So confused.
+      fov:  40 # TODO: wut? why does this work? Shouldn't this should be 40? So confused.
       near: 1
       far: 1000
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
@@ -163,55 +156,3 @@ $ ->
 
   # Pose control
   # -----------------------------------------------
-
-  posit = new POS.Posit qrCodeWidth, $canvas.width()
-
-  window.computePosition = =>
-    # rescaling everything
-    @size = width: $video.width(), height: $video.height()
-    $canvas.attr @size
-    # copying the video to the canvas for cv inspection
-    context.drawImage $video[0], 0, 0, $canvas.width(), $canvas.height()
-    imageData = context.getImageData 0, 0, $canvas.width(), $canvas.height()
-    # running cv
-    arMarkers = detector.detect imageData
-    return null unless arMarkers.length > 0
-    console.log arMarkers[0]
-    # centering the corner markers about the middle of the canvas
-    for c in arMarkers[0].corners
-      c.x = c.x - @size.width/2
-      c.y = @size.height/2 - c.y
-    
-    # returning a pose
-    console.log arMarkers[0].corners
-    pose = posit.pose arMarkers[0].corners
-    rotation = pose.bestRotation
-
-    results = 
-      rotation:
-        x: -Math.asin(-rotation[1][2])
-        y: -Math.atan2(rotation[0][2], rotation[2][2])
-        z: Math.atan2(rotation[1][0], rotation[1][1])
-      translation: pose.bestTranslation
-
-  window.tick = =>
-    requestAnimationFrame(tick)
-    if $video[0].readyState == $video[0].HAVE_ENOUGH_DATA # (if the video has started playback from the camera)
-      # qr code detection
-      @qrPosition = computePosition()
-      console.log @qrPosition if @qrPosition?
-      # updating the model orientation
-      drawScene() if @qrPosition?
-
-  fpsLimit = 10
-  #window.tick = window.tick.debounce(1000 / fpsLimit)
-
-  console.log "ar!"
-  navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
-  navigator.getUserMedia {video: true}, (stream) ->
-    console.log stream
-    $video.attr
-      src: if (window.webkitURL) then window.webkitURL.createObjectURL(stream) else stream
-      autoplay: true
-    requestAnimationFrame(tick)
-
