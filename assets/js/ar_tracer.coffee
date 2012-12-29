@@ -2,10 +2,10 @@ class ArTracer
 
   size: [0, 0]
   rotation: [0,0,0]
-  translation: [0,0,0]
+  translation: [0,0,-100]
 
   defaults:
-    focalLength: 870
+    focalLength: 890
     qr:
       metricWidth: 35.0 #56.53 # mm
 
@@ -73,10 +73,13 @@ class ArTracer
     pose = @posit.pose arMarkers[0].corners
     rotationMatrix = pose.bestRotation
 
-    @rotation.x = -Math.asin(-rotationMatrix[1][2])
-    @rotation.y = -Math.atan2(rotationMatrix[0][2], rotationMatrix[2][2])
-    @rotation.z = Math.atan2(rotationMatrix[1][0], rotationMatrix[1][1])
+    @rotation = [
+      -Math.asin(-rotationMatrix[1][2]),
+      -Math.atan2(rotationMatrix[0][2], rotationMatrix[2][2]),
+      Math.atan2(rotationMatrix[1][0], rotationMatrix[1][1])
+    ]
     @translation = pose.bestTranslation
+    @translation[2] *= -1
 
     console.log @translation
     console.log "x: #{@translation[0]}, y: #{@translation[1]}, z: #{@translation[2]}"
@@ -84,16 +87,17 @@ class ArTracer
     @$video.trigger "ar:orientaionchange", @
 
   tick: =>
-    # run CV if the video has started playback from the camera
-    if @$video[0].readyState == @$video[0].HAVE_ENOUGH_DATA and @camera?
-      @computePosition()
+    try
+      # run CV if the video has started playback from the camera
+      if @$video[0].readyState == @$video[0].HAVE_ENOUGH_DATA and @camera?
+        @computePosition()
 
-      timestamp = new Date().getTime()
-      @fps = 1000/(timestamp - p) if (p = @previousTickTimestamp)?
-      @previousTickTimestamp = timestamp
-      #console.log "#{@fps} fps"
-
-    requestAnimationFrame(@tick)
+        timestamp = new Date().getTime()
+        @fps = 1000/(timestamp - p) if (p = @previousTickTimestamp)?
+        @previousTickTimestamp = timestamp
+        #console.log "#{@fps} fps"
+    finally
+      requestAnimationFrame(@tick)
 
 
 $.fn.arTracer = (opts) -> new ArTracer @, opts; return @

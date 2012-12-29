@@ -22,6 +22,9 @@ $ ->
 
   new Viewer($("video"))
 
+PhiloGL.unpack()
+
+
 class Viewer
 
   position: [0,0,0]
@@ -36,7 +39,6 @@ class Viewer
     @initWebGl()
 
     gcode.parse gcode2dExample, (cmd, axes) => @lineTo(axes)
-    #gcode.parse gcode2dExample, (cmd, axes) => @lineTo(x: axes.x*100, y: axes.y*100, z: 0)
 
   initWebGl: => PhiloGL @$glCanvas.attr("id"),
     program:
@@ -47,6 +49,7 @@ class Viewer
       fov:  40
       near: 1
       far: 1000
+    ###
     scene:
       lights:
         enable: true
@@ -55,6 +58,7 @@ class Viewer
           diffuse: { r: 0.7, g: 0.7, b: 0.7}
           specular: { r: 0.8, g: 0.8, b: 0 }
           position: { x: 3, y: 3, z: 3}
+    ###
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
     onLoad: @onLoad
 
@@ -65,17 +69,15 @@ class Viewer
     @camera = app.camera
     @canvas = app.canvas
     @scene = app.scene
-    @view = new PhiloGL.Mat4
 
     console.log app
 
-    @gl.clearColor(0, 0, 0, 0)
+    @gl.clearColor(0, 0.5, 0, 0.5)
     @gl.clearDepth(1)
     @gl.enable(@gl.DEPTH_TEST)
     @gl.depthFunc(@gl.LEQUAL)
 
-    @camera.target = new PhiloGL.Vec3(0,0,-1)
-    #@camera.view.id()
+    @camera.target.set(0,0,-1)
 
     @lines = new PhiloGL.O3D.Model
       drawType: @gl.LINES
@@ -90,10 +92,10 @@ class Viewer
     window.square = @square = new PhiloGL.O3D.Model
       drawType: @gl.TRIANGLE_STRIP
       vertices: [
-        +1, +1, 0
-        -1, +1, 0
-        +1, -1, 0
-        -1, -1, 0
+        -1.0, -1.0,  0.0,
+        1.0, -1.0,  0.0,
+        -1.0,  1.0,  0.0,
+        1.0,  1.0,  0.0
       ]
       colors: [
         0.5, 0.5, 1, 0.5,
@@ -101,59 +103,49 @@ class Viewer
         0.5, 0.5, 1, 0.5,
         0.5, 0.5, 1, 0.5
       ]
+      texCoords: [
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0
+      ]
+      indices: [0, 1, 3, 3, 2, 0]
       uniforms:
         shininess: 10,
         colorUfm: [0.5, 0.3, 0.7, 1]
+        hasTexture1: false
 
     metricWidth = 35.0
-    @square.scale.set metricWidth, metricWidth, 0.1
-    #@square.scale.set 25, 25, 2 # not sure why this scale works but it does (something to do with px vs mm perhaps?)
+    qrScreenWidth = metricWidth * 0.55 # Horray for totally bs scaling factors!
+    @square.scale.set qrScreenWidth, qrScreenWidth, 2
     @scene.add(@square)
-    console.log @square
+    #console.log @square
     @updateLines()
 
     # updating the model orientation
-    $video = $("video").on 'ar:orientaionchange', (e, t) => @tracer = t; @drawScene()
+    $video = $("video").on 'ar:orientaionchange', (e, t) => @tracer = t; @render()
     $video.on 'ar:videoresize', (e, t) => @tracer = t; @resize()
     # initializing qr code tracking
     $video.arTracer qr: {metricWidth: metricWidth}
 
-  ###
-  drawElement: (elem, type, vertsPerElement) =>
-    #update element matrix
-    elem.update()
-    #get new view matrix out of element and camera matrices
-    @view.mulMat42(@camera.view, elem.matrix)
-    #set buffers with element data
-    @program.setBuffers
-      aVertexPosition: { value: elem.vertices, size: 3 }
-      aVertexColor:    { value: elem.colors,   size: 4 }
-
-    #set uniforms
-    @program.setUniform('uMVMatrix', @view)
-    @program.setUniform('uPMatrix', @camera.projection)
-    #console.log elem.vertices.length
-    @gl.drawArrays(type, 0, vertsPerElement)
-  ###
-
   resize: ->
-    # Resize
     console.log @tracer.size
     @size = @tracer.size
     @$glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()
-    @drawScene()
+    @render()
 
-  drawScene: =>
+  render: =>
+    #console.log "Draw!"
+    @updateTracerPositions()
+
     # Clear Screen
     @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
-
     # Draw everything
     @scene.render()
 
-    #@updateTracerPositions()
     #console.log @square.position
     #@drawElement(@square, @gl.TRIANGLE_STRIP, 4)
     #@drawElement(@lines, @gl.LINES, 2)
@@ -167,13 +159,12 @@ class Viewer
   updateLines: =>
     @scene.models.remove(@lines) if @line?
     @lines = new PhiloGL.O3D.Model vertices: @lineVerts, colors: @lineColors
-    #@scene.add(@lines)
+    @scene.add(@lines)
 
-  updateTracerPositions: -> if @tracer?
-    t = @tracer.translation
-    r = @tracer.rotation
+  #updateTracerPositions: -> @updatePositions [0,0,15], {x: 0, y: 0, z: 0}#@tracer.translation, @tracer.rotation if @tracer?
+  updateTracerPositions: -> @updatePositions @tracer.translation, @tracer.rotation if @tracer?
 
-    for obj in [@lines, @square]
-      obj.position.set(t[0], t[1], t[2])
-      obj.rotation.set(r.x, r.y, r.z)
-      obj.update()
+  updatePositions: (t, r) -> for obj in [@lines, @square]
+    obj.position.set(t[0], t[1], t[2])
+    obj.rotation.set(r[0], r[1], r[2])
+    obj.update()
