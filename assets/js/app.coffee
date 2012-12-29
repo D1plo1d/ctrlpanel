@@ -167,7 +167,7 @@ class Viewer
   updateLines: =>
     @scene.models.remove(@lines) if @line?
     @lines = new PhiloGL.O3D.Model vertices: @lineVerts, colors: @lineColors
-    @scene.add(@lines)
+    #@scene.add(@lines)
 
   updateTracerPositions: -> if @tracer?
     t = @tracer.translation

@@ -8,8 +8,8 @@ uniform mat4 worldMatrix;
 uniform mat4 projectionMatrix;
 uniform mat4 worldInverseTransposeMatrix;
 
-//varying vec2 vTexCoord1;
-//varying vec2 vTexCoord2;
+varying vec2 vTexCoord1;
+varying vec2 vTexCoord2;
 varying vec4 vTransformedNormal;
 varying vec4 vPosition;
 varying vec4 vColor;
