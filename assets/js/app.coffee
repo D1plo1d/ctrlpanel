@@ -21,7 +21,7 @@ $ ->
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
   # initializing qr code tracking
-  $video = $("video").ar_tracer qr: {metricWidth: 35.0}
+  $video = $("video").arTracer qr: {metricWidth: 35.0}
   # updating the model orientation
   $video.on 'ar:orientaionchange', (e, p) => drawScene() if (@platform = p)?
 
