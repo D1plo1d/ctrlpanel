@@ -1,6 +1,6 @@
 window.gcode = {}
 
-gcode.parse = (str, callback) -> str.lines (line) ->
+gcode.parse = (str, callback) -> str.lines (line) =>
   # removing comments and whitespace as well as converting to lower case
   attrs = line.replace( /(;.*)|(\(.*?\))| /g , '').trim().toLowerCase().split(/(?=[a-z])/)
 

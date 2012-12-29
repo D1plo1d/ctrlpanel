@@ -5,8 +5,9 @@ class ArTracer
   translation: [0,0,0]
 
   defaults:
+    focalLength: 870
     qr:
-      metricWidth: 60.325 # mm
+      metricWidth: 35.0 #56.53 # mm
 
   # the qr code width is expected to be in milimeters
   constructor: ($video, opts) ->
@@ -20,7 +21,12 @@ class ArTracer
 
     # QR code CV
     @detector = new AR.Detector()
-    @posit = new POS.Posit @opts.qr.metricWidth, @$canvas.width()
+    @posit = new POS.Posit @opts.qr.metricWidth, @opts.focalLength
+
+    # Initializing the scaling
+    @resize()
+    @$video.on "playing loadedmetadata", @resize
+    $(window).resize @resize
 
     # Camera initialization
     console.log "ar!"
@@ -32,32 +38,36 @@ class ArTracer
     @$video.attr
       src: if (window.webkitURL) then window.webkitURL.createObjectURL(stream) else stream
       autoplay: true
-    @rescale()
     requestAnimationFrame(@tick)
 
-  rescale: ->
+  resize: (e) =>
     # Rescaling the canvas to match the video frame
-    @size = width: @$video.width(), height: @$video.height()
+    @size = width: @$video.width(), height: @$video.height() # screen size (css)
+    @camera = width: @$video[0].videoWidth, height: @$video[0].videoHeight # original video feed size (camera)
+    @scale = x: @size.width / @camera.width, y: @size.height / @camera.height
+    console.log @size
+    console.log @camera
     @$canvas.attr @size
+    @$video.trigger "ar:videoresize", @
 
   # copies the video to the canvas for cv inspection. This is unfortunately a hugely time consuming way of doing things.
   snapshot: ->
-    @context.drawImage @$video[0], 0, 0, @size.width, @size.height
+    w = @camera.width; h = @camera.height
+    @context.drawImage @$video[0], 0, 0, w, h, 0, 0, w, h
     # This data-only hack works wonders with v8 ("self" cpu time down from 39.57% to 14.33% for this function).
-    return data: @context.getImageData(0, 0, @size.width, @size.height).data
+    #return @context.getImageData(0, 0, @size.width, @size.height)
+    return data: @context.getImageData(0, 0, w, h).data, width: w, height: h
 
   computePosition: =>
-    imageData = @snapshot()
-
     # running cv
-    arMarkers = @detector.detect imageData
+    arMarkers = @detector.detect @snapshot()
     return unless arMarkers.length > 0
 
     # centering the corner markers about the middle of the canvas
     for c in arMarkers[0].corners
-      c.x = c.x - @size.width/2
-      c.y = @size.height/2 - c.y
-  
+      c.x = (c.x - @camera.width/2)*@scale.x
+      c.y = (@camera.height/2 - c.y)*@scale.y
+
     # returning a pose
     #console.log arMarkers[0].corners
     pose = @posit.pose arMarkers[0].corners
@@ -74,15 +84,16 @@ class ArTracer
     @$video.trigger "ar:orientaionchange", @
 
   tick: =>
-    timestamp = new Date().getTime()
-    @fps = 1000/(timestamp - p) if (p = @previousTickTimestamp)?
-    @previousTickTimestamp = timestamp
-    #console.log "#{@fps} fps"
+    # run CV if the video has started playback from the camera
+    if @$video[0].readyState == @$video[0].HAVE_ENOUGH_DATA and @camera?
+      @computePosition()
+
+      timestamp = new Date().getTime()
+      @fps = 1000/(timestamp - p) if (p = @previousTickTimestamp)?
+      @previousTickTimestamp = timestamp
+      #console.log "#{@fps} fps"
 
     requestAnimationFrame(@tick)
-
-    # run CV if the video has started playback from the camera
-    @computePosition() if @$video[0].readyState == @$video[0].HAVE_ENOUGH_DATA
 
 
 $.fn.arTracer = (opts) -> new ArTracer @, opts; return @

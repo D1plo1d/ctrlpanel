@@ -90,28 +90,11 @@ mixin more
     video
   - //TODO: fan, conveyor, home
 
+| <script id="shader-vs" type="x-shader/x-vertex">
+include ../assets/shaders/shader.vs.glsl
+| </script>
 
-script(id="shader-fs", type="x-shader/x-fragment").
-  #ifdef GL_ES
-  precision highp float;
-  #endif
+| <script id="shader-fs" type="x-shader/x-fragment">
+include ../assets/shaders/shader.fs.glsl
+| </script>
 
-  varying vec4 vColor;
-
-  void main(void) {
-    gl_FragColor = vColor;
-  }
-
-script(id="shader-vs", type="x-shader/x-vertex").
-  attribute vec3 aVertexPosition;
-  attribute vec4 aVertexColor;
-
-  uniform mat4 uMVMatrix;
-  uniform mat4 uPMatrix;
-
-  varying vec4 vColor;
-
-  void main(void) {
-    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-    vColor = aVertexColor;
-  }
