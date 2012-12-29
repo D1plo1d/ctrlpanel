@@ -21,9 +21,9 @@ $ ->
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
   # initializing qr code tracking
-  $video = $("video").beacon qr: {metricWidth: 35.0}
+  $video = $("video").ar_tracer qr: {metricWidth: 35.0}
   # updating the model orientation
-  $video.on 'orientation:change', (e, o) => drawScene() if (@orientation = o)?
+  $video.on 'ar:orientaionchange', (e, p) => drawScene() if (@platform = p)?
 
 
   # Texture and UV canvas (gcode layers)
@@ -82,8 +82,8 @@ $ ->
   #drawScene = =>
   window.drawScene = =>
     # Resize
-    console.log @orientation.size
-    @size = @orientation.size
+    console.log @platform.size
+    @size = @platform.size
     $glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
@@ -93,9 +93,9 @@ $ ->
     @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
 
     # Draw Square
-    if @orientation?
-      translation = @orientation.translation
-      rotation = @orientation.rotation
+    if @platform?
+      translation = @platform.translation
+      rotation = @platform.rotation
       @square.position.set(translation[0], translation[1], -translation[2])
       @square.rotation.set(rotation.x, rotation.y, rotation.z)
     else

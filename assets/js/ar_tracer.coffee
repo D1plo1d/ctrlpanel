@@ -1,4 +1,4 @@
-class Beacon
+class ArTracer
 
   size: [0, 0]
   rotation: [0,0,0]
@@ -71,7 +71,7 @@ class Beacon
     console.log @translation
     console.log "x: #{@translation[0]}, y: #{@translation[1]}, z: #{@translation[2]}"
 
-    @$video.trigger "orientation:change", @
+    @$video.trigger "ar:orientaionchange", @
 
   tick: =>
     timestamp = new Date().getTime()
@@ -85,4 +85,4 @@ class Beacon
     @computePosition() if @$video[0].readyState == @$video[0].HAVE_ENOUGH_DATA
 
 
-$.fn.beacon = (opts) -> new Beacon @, opts; return @
+$.fn.arTracer = (opts) -> new ArTracer @, opts; return @
