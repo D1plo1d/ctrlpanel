@@ -6,12 +6,14 @@ class ArTracer
 
   defaults:
     focalLength: 890
+    enabled: true
     qr:
       metricWidth: 35.0 #56.53 # mm
 
   # the qr code width is expected to be in milimeters
   constructor: ($video, opts) ->
     @opts = opts = $.extend true, {}, @defaults, opts
+    @enabled = @opts.enabled
 
     @$video = $video
 
@@ -24,10 +26,12 @@ class ArTracer
     @posit = new POS.Posit @opts.qr.metricWidth, @opts.focalLength
 
     # Initializing the scaling
-    @resize()
+    @resize(null, true)
     @$video.on "playing loadedmetadata", @resize
     $(window).resize @resize
+    @$video.trigger "ar:init", @
 
+  toggle: (enable) -> if ( @enabled = enable || !@enabled )
     # Camera initialization
     console.log "ar!"
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia
@@ -40,15 +44,15 @@ class ArTracer
       autoplay: true
     requestAnimationFrame(@tick)
 
-  resize: (e) =>
+  resize: (e, init) =>
     # Rescaling the canvas to match the video frame
     @size = width: @$video.width(), height: @$video.height() # screen size (css)
     @camera = width: @$video[0].videoWidth, height: @$video[0].videoHeight # original video feed size (camera)
     @scale = x: @size.width / @camera.width, y: @size.height / @camera.height
-    console.log @size
-    console.log @camera
+    #console.log @size
+    #console.log @camera
     @$canvas.attr @size
-    @$video.trigger "ar:videoresize", @
+    @$video.trigger "ar:videoresize", @ unless init?
 
   # copies the video to the canvas for cv inspection. This is unfortunately a hugely time consuming way of doing things.
   snapshot: ->
@@ -80,9 +84,7 @@ class ArTracer
     ]
     @translation = pose.bestTranslation
     @translation[2] *= -1
-
-    console.log @translation
-    console.log "x: #{@translation[0]}, y: #{@translation[1]}, z: #{@translation[2]}"
+    #console.log "x: #{@translation[0]}, y: #{@translation[1]}, z: #{@translation[2]}"
 
     @$video.trigger "ar:orientaionchange", @
 
@@ -97,7 +99,12 @@ class ArTracer
         @previousTickTimestamp = timestamp
         #console.log "#{@fps} fps"
     finally
-      requestAnimationFrame(@tick)
+      requestAnimationFrame(@tick) if @enabled
 
 
-$.fn.arTracer = (opts) -> new ArTracer @, opts; return @
+$.fn.arTracer = (opts) ->
+  if tracker = @.data "artracer"
+    tracker[ arguments.shift() ].apply tracker, arguments
+  else
+    @.data "artracer", new ArTracer @, opts
+  return @

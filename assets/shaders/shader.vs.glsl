@@ -15,6 +15,6 @@ void main(void) {
   vColor = color;
 
   // position transforms
-  vec4 mvPosition = worldMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
+  //gl_Position = worldMatrix * vec4(position, 1.0);
 }

@@ -20,27 +20,28 @@ $ ->
   $sidePanelLinks = $("#manual_ctrl .side-panel h4 a")
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
-  new Viewer($("video"))
-
-PhiloGL.unpack()
+  $.get "/tinyopenviolin_4x.gcode", (gcode) -> new Viewer($("video"), gcode)
 
 
 class Viewer
 
-  position: [0,0,0]
-  lineVerts: []
-  lineColors: []
+  # Configuration and WebGL settings
 
-  constructor: ($video) ->
-    # WebGL overlay
-    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
-    $video.parent().prepend @$glCanvas
+  gcodeScale: 0.3
+  qrMetricWidth: 35.0
+  qrScale: 0.55 # Horray for totally bs scaling factors!
 
-    @initWebGl()
+  arEnabled: false
+  mode: "gcode" # gcode | mixed | model # (TODO)
 
-    gcode.parse gcode2dExample, (cmd, axes) => @lineTo(axes)
+  printerMat4: new PhiloGL.Mat4()
 
-  initWebGl: => PhiloGL @$glCanvas.attr("id"),
+  commonUniforms:
+    shininess: 10,
+    colorUfm: [0.5, 0.3, 0.7, 1]
+    hasTexture1: false
+
+  webGlSettings: -> @_webGlSettings ||=
     program:
       from: 'ids'
       vs: 'shader-vs'
@@ -49,122 +50,169 @@ class Viewer
       fov:  40
       near: 1
       far: 1000
-    ###
-    scene:
-      lights:
-        enable: true
-        ambient: { r: 0.6, g: 0.6, b: 0.6 }
-        points:
-          diffuse: { r: 0.7, g: 0.7, b: 0.7}
-          specular: { r: 0.8, g: 0.8, b: 0 }
-          position: { x: 3, y: 3, z: 3}
-    ###
+    models:
+      gcodeLines:
+        class: PhiloGL.O3D.PolyLine
+        colors: [1, 1, 1, 0.8]
+        uniforms: @commonUniforms
+        render: @renderLines
+      ###
+      platform:
+        class: PhiloGL.O3D.Model
+        vertices: [
+          -1.0, -1.0,  0.0,
+          1.0, -1.0,  0.0,
+          -1.0,  1.0,  0.0,
+          1.0,  1.0,  0.0
+        ]
+        position: [0, 0, 0]
+        rotation: [0, 0, 0]
+        #scale: [0.1 ,0.1 , 2]
+        colors: [0.5, 0.5, 1, 0.5]
+        indices: [0, 1, 3, 3, 2, 0]
+        uniforms: @commonUniforms
+        ###
+      printerModel:
+        class: PhiloGL.O3D.Model
+        url: "/ultimaker_platform.stl"
+        #url: "/cube.stl"
+        #vertices: []
+        position: [0, 0, 0]
+        rotation: [Math.PI*3/2+0.2, 0, 0]
+        scale: [0.1, 0.1, 0.1]
+        colors: [0.5, 0.5, 1, 0.5]
+        #indices: [0, 1, 3, 3, 2, 0]
+        uniforms: @commonUniforms
+    events:
+      onDragStart: (e) => @mouseOffset = {x: e.x, y: e.y}
+      onDragMove: (e) => @onDragMove {x: e.x - @mouseOffset.x, y: e.y - @mouseOffset.y}
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
     onLoad: @onLoad
 
+
+  # Viewer Methods
+
+  constructor: ($video, gcode) ->
+    @gcode = gcode
+
+    # Setting up AR scaling
+    @qrWidth = @qrScale * @qrMetricWidth
+
+    # Initializing the printer's orientation. TODO: This is definitely a work in progress.
+    #@printerMat4.$translate 0, 0, 3
+    #@printerMat4.$rotateXYZ 0, 0, 0
+
+    # WebGL overlay
+    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
+    $video.parent().prepend @$glCanvas
+    PhiloGL @$glCanvas.attr("id"), @_webGlSettings = @webGlSettings()
+
+  loadModel: (name, opts) -> P3D.loadBinaryStl opts.url, undefined, (verts, normals, indices) =>
+    #console.log "loaded!"
+    #console.log normals
+    #console.log verts
+    #o3d.normals.set normals
+    opts.vertices = verts
+    #opts.normals = normals
+    opts.indices = indices
+    delete opts.url
+    @addModel name, opts
+
+  addModel: (name, opts) ->
+    if opts.url?
+      @loadModel name, opts
+    else
+      @[name] = o3d = new opts.class opts
+      o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
+      console.log "#{name} start"
+      console.log o3d
+      console.log "#{name} end"
+      # o3d.parentMatrix = @printerMat4 #TODO!
+      o3d.update()
+      @scene.add o3d
+      @requestRender()
+
+
   onLoad: (app) => requestAnimationFrame =>
     @app = app
-    @gl = app.gl
-    @program = app.program
-    @camera = app.camera
-    @canvas = app.canvas
-    @scene = app.scene
+    @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
 
     console.log app
 
-    @gl.clearColor(0, 0.5, 0, 0.5)
+    # WebGL settings
+    #@gl.clearColor(0, 0, 0, 0)
+    @gl.clearColor(0, 0, 0, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.DEPTH_TEST)
     @gl.depthFunc(@gl.LEQUAL)
 
-    @camera.target.set(0,0,-1)
+    # Camera + Scene config
+    @camera.position.set 0, 0, 100 # TODO: temporary printer matrix work around
+    @camera.target.set(0,0,0)
+    @camera.update()
 
-    @lines = new PhiloGL.O3D.Model
-      drawType: @gl.LINES
-      dynamic: true
-      vertices: []
-      colors: []
-      uniforms:
-        shininess: 10,
-        colorUfm: [0.5, 0.3, 0.7, 1]
+    # Initializing models (because philoGL doesn't yet do this for us)
+    @addModel(k, opts) for k, opts of @webGlSettings().models
 
+    # GCode parsing
+    gcodeUtils.parse @gcode, (cmd, axes) => @gcodeLines.lineTo(axes)
+    delete @gcode
+    @gcodeLines.updateLines()
 
-    window.square = @square = new PhiloGL.O3D.Model
-      drawType: @gl.TRIANGLE_STRIP
-      vertices: [
-        -1.0, -1.0,  0.0,
-        1.0, -1.0,  0.0,
-        -1.0,  1.0,  0.0,
-        1.0,  1.0,  0.0
-      ]
-      colors: [
-        0.5, 0.5, 1, 0.5,
-        0.5, 0.5, 1, 0.5,
-        0.5, 0.5, 1, 0.5,
-        0.5, 0.5, 1, 0.5
-      ]
-      texCoords: [
-        0.0, 0.0,
-        1.0, 0.0,
-        0.0, 1.0,
-        1.0, 1.0
-      ]
-      indices: [0, 1, 3, 3, 2, 0]
-      uniforms:
-        shininess: 10,
-        colorUfm: [0.5, 0.3, 0.7, 1]
-        hasTexture1: false
+    #@scene.add(@[k]) for k, opts of @webGlSettings().models
+    #@scene.add @platform
 
-    metricWidth = 35.0
-    qrScreenWidth = metricWidth * 0.55 # Horray for totally bs scaling factors!
-    @square.scale.set qrScreenWidth, qrScreenWidth, 2
-    @scene.add(@square)
-    #console.log @square
-    @updateLines()
+    # Augmented Reality config
+    @$video = $("video").on
+      'ar:orientaionchange': @onArOrientationChange
+      'ar:videoresize': (e, t) => @tracer = t; @resize()
+    @$video.arTracer qr: {metricWidth: @qrMetricWidth}, enabled: @arEnabled
 
-    # updating the model orientation
-    $video = $("video").on 'ar:orientaionchange', (e, t) => @tracer = t; @render()
-    $video.on 'ar:videoresize', (e, t) => @tracer = t; @resize()
-    # initializing qr code tracking
-    $video.arTracer qr: {metricWidth: metricWidth}
+    # Init
+    @requestRender()
+    @resize()
+    @render()
+
+  onDragMove: (mouse) ->
+    console.log mouse
+
+  toggleAr: (enabled) =>
+    @$video.arTracker "toggle", ( @arEnabled = enabled || !@arEnabled )
 
   resize: ->
-    console.log @tracer.size
-    @size = @tracer.size
+    console.log "Resize!"
+    @size = width: @$glCanvas.parent().innerWidth(), height: @$glCanvas.closest(".row").innerHeight()
+    #@size = @tracer.size
     @$glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()
-    @render()
+
+  requestRender: -> @dirty = true
 
   render: =>
-    #console.log "Draw!"
-    @updateTracerPositions()
+    if @dirty == true
+      console.log "Draw!"
+      # Clear Screen
+      @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
+      # Draw everything
+      @scene.render()
 
-    # Clear Screen
-    @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
-    # Draw everything
-    @scene.render()
+    @dirty = false
+    requestAnimationFrame @render
 
-    #console.log @square.position
-    #@drawElement(@square, @gl.TRIANGLE_STRIP, 4)
-    #@drawElement(@lines, @gl.LINES, 2)
 
-  lineTo: (newPosition) =>
-    for p in [@position, newPosition]
-      @lineVerts << [p.x, p.y, p.z]
-      @lineColors << [0.5, 0.5, 1, 1]
-    @position = newPosition
+  onArOrientationChange: (e, t) => if (@tracer = t)?
+    @printerMat4.$translate( @tracer.translation )
+    @printerMat4.$rotateXYZ( @tracer.rotation )
+    @update()
+    @render()
 
-  updateLines: =>
-    @scene.models.remove(@lines) if @line?
-    @lines = new PhiloGL.O3D.Model vertices: @lineVerts, colors: @lineColors
-    @scene.add(@lines)
+  update: (t, r) -> obj.update() for obj in [@gcodeLines, @platform]
 
-  #updateTracerPositions: -> @updatePositions [0,0,15], {x: 0, y: 0, z: 0}#@tracer.translation, @tracer.rotation if @tracer?
-  updateTracerPositions: -> @updatePositions @tracer.translation, @tracer.rotation if @tracer?
+  renderLines: => if @gcodeLines.vertices.length > 0
+    console.log "line render!"
+    #console.log @gcodeLines.$verticesLength
+    #console.log @gcodeLines.$indicesLength * 3 / 2
+    #@gl.drawArrays(@gl.LINES, 0, @gcodeLines.$verticesLength / 3)
 
-  updatePositions: (t, r) -> for obj in [@lines, @square]
-    obj.position.set(t[0], t[1], t[2])
-    obj.rotation.set(r[0], r[1], r[2])
-    obj.update()
