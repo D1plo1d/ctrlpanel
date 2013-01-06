@@ -50,6 +50,13 @@ class Viewer
       fov:  40
       near: 1
       far: 1000
+    scene:
+      lights:
+        enable: true
+        ambient: { r: 0.3, g: 0.3, b: 0.3 }
+        directional:
+          color: { r: 0.1, g: 0.1, b: 0.1 }
+          direction: { x: 0.5, y: -0.3, z: -1 }
     models:
       gcodeLines:
         class: PhiloGL.O3D.PolyLine
@@ -80,12 +87,13 @@ class Viewer
         position: [0, 0, 0]
         rotation: [Math.PI*3/2+0.2, 0, 0]
         scale: [0.1, 0.1, 0.1]
-        colors: [0.5, 0.5, 1, 0.5]
+        #colors: [0.5, 0.5, 1, 0.5]
+        colors: [0.5, 0.5, 1, 1]
         #indices: [0, 1, 3, 3, 2, 0]
         uniforms: @commonUniforms
     events:
-      onDragStart: (e) => @mouseOffset = {x: e.x, y: e.y}
-      onDragMove: (e) => @onDragMove {x: e.x - @mouseOffset.x, y: e.y - @mouseOffset.y}
+      onDragStart: @setDragOffset
+      onDragMove: @onDragMove
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
     onLoad: @onLoad
 
@@ -113,7 +121,7 @@ class Viewer
     #console.log verts
     #o3d.normals.set normals
     opts.vertices = verts
-    #opts.normals = normals
+    opts.normals = normals
     opts.indices = indices
     delete opts.url
     @addModel name, opts
@@ -173,8 +181,18 @@ class Viewer
     @resize()
     @render()
 
-  onDragMove: (mouse) ->
-    console.log mouse
+  setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
+  onDragMove: (e) =>
+    mouse = {x: e.x - @mouseOffset.x, y: e.y - @mouseOffset.y}
+    @setDragOffset(e)
+
+    rot = @printerModel.rotation
+    rot.y = ( rot.y + mouse.x/50 ) % ( Math.PI*2 )
+    rot.x = ( rot.x - mouse.y/100 )
+    rot.x = Math.max Math.PI, Math.min(rot.x, Math.PI*2)
+
+    @printerModel.update()
+    @requestRender()
 
   toggleAr: (enabled) =>
     @$video.arTracker "toggle", ( @arEnabled = enabled || !@arEnabled )
@@ -192,7 +210,7 @@ class Viewer
 
   render: =>
     if @dirty == true
-      console.log "Draw!"
+      #console.log "Draw!"
       # Clear Screen
       @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
       # Draw everything
@@ -210,8 +228,8 @@ class Viewer
 
   update: (t, r) -> obj.update() for obj in [@gcodeLines, @platform]
 
-  renderLines: => if @gcodeLines.vertices.length > 0
-    console.log "line render!"
+  renderLines: => #if @gcodeLines.vertices.length > 0
+    #console.log "line render!"
     #console.log @gcodeLines.$verticesLength
     #console.log @gcodeLines.$indicesLength * 3 / 2
     #@gl.drawArrays(@gl.LINES, 0, @gcodeLines.$verticesLength / 3)
