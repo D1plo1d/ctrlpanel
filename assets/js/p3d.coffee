@@ -54,13 +54,13 @@ P3D.loadBinaryStl = (url, opts = {center: true}, callback) ->
       verts[i*3+j] = data[offset+3+j+k] - center[j] for j in [0..2] for k in [0..8] by 3
     ###
 
-    console.log normals
-    console.log verts
+    #console.log normals
+    #console.log verts
     #console.log indices
-    console.log verts.length/9
-    console.log min
-    console.log max
-    console.log center
+    #console.log verts.length/9
+    #console.log min
+    #console.log max
+    #console.log center
 
     callback verts, normals, indices
   xhr.send()

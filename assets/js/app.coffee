@@ -34,6 +34,9 @@ class Viewer
   arEnabled: false
   mode: "gcode" # gcode | mixed | model # (TODO)
 
+  rotation: new PhiloGL.Vec3 Math.PI*3/2+0.2, 0, 0
+  position: new PhiloGL.Vec3 0, 0, 0
+
   printerMat4: new PhiloGL.Mat4()
 
   commonUniforms:
@@ -53,18 +56,19 @@ class Viewer
     scene:
       lights:
         enable: true
-        ambient: { r: 0.3, g: 0.3, b: 0.3 }
+        ambient: { r: 1, g: 1, b: 1 }
         directional:
-          color: { r: 0.1, g: 0.1, b: 0.1 }
+          color: { r: 0.3, g: 0.3, b: 0.3 }
           direction: { x: 0.5, y: -0.3, z: -1 }
     models:
       gcodeLines:
+        display: false
         class: PhiloGL.O3D.PolyLine
         colors: [1, 1, 1, 0.8]
         uniforms: @commonUniforms
         render: @renderLines
-      ###
-      platform:
+      arMarker:
+        display: false
         class: PhiloGL.O3D.Model
         vertices: [
           -1.0, -1.0,  0.0,
@@ -78,19 +82,35 @@ class Viewer
         colors: [0.5, 0.5, 1, 0.5]
         indices: [0, 1, 3, 3, 2, 0]
         uniforms: @commonUniforms
-        ###
-      printerModel:
+      platform:
         class: PhiloGL.O3D.Model
         url: "/ultimaker_platform.stl"
-        #url: "/cube.stl"
-        #vertices: []
-        position: [0, 0, 0]
-        rotation: [Math.PI*3/2+0.2, 0, 0]
         scale: [0.1, 0.1, 0.1]
-        #colors: [0.5, 0.5, 1, 0.5]
-        colors: [0.5, 0.5, 1, 1]
-        #indices: [0, 1, 3, 3, 2, 0]
+        colors: [0.2, 0.2, 0.2, 0.5]
         uniforms: @commonUniforms
+        init: (o3d) =>
+          verts = o3d.$vertices
+          offset = [0, @webGlSettings().models.cube.scale[1] / o3d.scale.y, 0]
+          verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
+      cube:
+        display: true
+        class: PhiloGL.O3D.Cube
+        position: [0, 0, 0]
+        scale: [10, 10, 10]
+        indices: [
+          2, 1, 0, 3, 2, 0,
+          6, 5, 4, 7, 6, 4,
+          10, 9, 8, 11, 10, 8,
+          14, 13, 12, 15, 14, 12,
+          18, 17, 16, 19, 18, 16,
+          22, 21, 20, 23, 22, 20
+        ]
+        colors: [39/255, 137/255, 250/255, 0.5]
+        uniforms: @commonUniforms
+        init: (o3d) ->
+          verts = o3d.$vertices
+          offset = [0, 0, +1]
+          verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
     events:
       onDragStart: @setDragOffset
       onDragMove: @onDragMove
@@ -125,6 +145,7 @@ class Viewer
     opts.indices = indices
     delete opts.url
     @addModel name, opts
+    @update()
 
   addModel: (name, opts) ->
     if opts.url?
@@ -132,10 +153,11 @@ class Viewer
     else
       @[name] = o3d = new opts.class opts
       o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
-      console.log "#{name} start"
-      console.log o3d
-      console.log "#{name} end"
+      #console.log "#{name} start"
+      #console.log o3d
+      #console.log "#{name} end"
       # o3d.parentMatrix = @printerMat4 #TODO!
+      opts.init(o3d) if opts.init?
       o3d.update()
       @scene.add o3d
       @requestRender()
@@ -145,14 +167,18 @@ class Viewer
     @app = app
     @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
 
-    console.log app
+    #console.log app
 
     # WebGL settings
-    #@gl.clearColor(0, 0, 0, 0)
+    #@gl.clearColor(1, 1, 1, 1)
     @gl.clearColor(0, 0, 0, 1)
     @gl.clearDepth(1)
+    @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
     @gl.depthFunc(@gl.LEQUAL)
+    @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
+    @gl.enable(@gl.BLEND)
+    @gl.disable(@gl.DEPTH_TEST)
 
     # Camera + Scene config
     @camera.position.set 0, 0, 100 # TODO: temporary printer matrix work around
@@ -168,7 +194,6 @@ class Viewer
     @gcodeLines.updateLines()
 
     #@scene.add(@[k]) for k, opts of @webGlSettings().models
-    #@scene.add @platform
 
     # Augmented Reality config
     @$video = $("video").on
@@ -177,6 +202,7 @@ class Viewer
     @$video.arTracer qr: {metricWidth: @qrMetricWidth}, enabled: @arEnabled
 
     # Init
+    @update()
     @requestRender()
     @resize()
     @render()
@@ -186,12 +212,12 @@ class Viewer
     mouse = {x: e.x - @mouseOffset.x, y: e.y - @mouseOffset.y}
     @setDragOffset(e)
 
-    rot = @printerModel.rotation
+    rot = @rotation
     rot.y = ( rot.y + mouse.x/50 ) % ( Math.PI*2 )
     rot.x = ( rot.x - mouse.y/100 )
     rot.x = Math.max Math.PI, Math.min(rot.x, Math.PI*2)
 
-    @printerModel.update()
+    @update()
     @requestRender()
 
   toggleAr: (enabled) =>
@@ -226,7 +252,11 @@ class Viewer
     @update()
     @render()
 
-  update: (t, r) -> obj.update() for obj in [@gcodeLines, @platform]
+  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker]
+    continue unless model?
+    model.rotation = @rotation
+    model.position = @position
+    model.update()
 
   renderLines: => #if @gcodeLines.vertices.length > 0
     #console.log "line render!"
