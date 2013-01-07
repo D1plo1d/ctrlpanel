@@ -18,20 +18,3 @@ class O3D.PolyLine extends O3D.Model
 
   updateLines: =>
     @[k] = @_lines[k] for k in ["vertices", "indices"]
-
-
-
-# Adding basic scene graph capabilities to every model (this is only a single layer atm). TODO: horribly broken.
-###
-O3D.Model.prototype.update = ->
-  `var matrix = this.matrix,
-      pos = this.position,
-      rot = this.rotation,
-      scale = this.scale;
-
-  matrix.id();`
-  matrix.$translate(pos.x, pos.y, pos.z)
-  matrix.$rotateXYZ(rot.x, rot.y, rot.z)
-  matrix.$scale(scale.x, scale.y, scale.z)
-  matrix.$mulMat4(@parentMatrix) if @parentMatrix?
-###

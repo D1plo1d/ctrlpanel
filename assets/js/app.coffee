@@ -20,7 +20,7 @@ $ ->
   $sidePanelLinks = $("#manual_ctrl .side-panel h4 a")
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
-  $.get "/tinyopenviolin_4x.gcode", (gcode) -> new Viewer($("video"), gcode)
+  $.get "/40mmcube.gcode", (gcode) -> new Viewer($("video"), gcode)
 
 
 class Viewer
@@ -34,8 +34,8 @@ class Viewer
   arEnabled: false
   mode: "gcode" # gcode | mixed | model # (TODO)
 
-  rotation: new PhiloGL.Vec3 Math.PI*3/2+0.2, 0, 0
-  position: new PhiloGL.Vec3 0, 0, 0
+  rotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
+  position: new PhiloGL.Vec3(0, -5, -70)
 
   printerMat4: new PhiloGL.Mat4()
 
@@ -62,9 +62,9 @@ class Viewer
           direction: { x: 0.5, y: -0.3, z: -1 }
     models:
       gcodeLines:
-        display: false
+        display: true
         class: PhiloGL.O3D.PolyLine
-        colors: [1, 1, 1, 0.8]
+        colors: [1, 0, 1, 1]
         uniforms: @commonUniforms
         render: @renderLines
       arMarker:
@@ -83,6 +83,7 @@ class Viewer
         indices: [0, 1, 3, 3, 2, 0]
         uniforms: @commonUniforms
       platform:
+        display: true
         class: PhiloGL.O3D.Model
         url: "/ultimaker_platform.stl"
         scale: [0.1, 0.1, 0.1]
@@ -114,6 +115,7 @@ class Viewer
     events:
       onDragStart: @setDragOffset
       onDragMove: @onDragMove
+      onMouseWheel: @onMouseWheel
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
     onLoad: @onLoad
 
@@ -122,24 +124,58 @@ class Viewer
 
   constructor: ($video, gcode) ->
     @gcode = gcode
+    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
+    $video.parent().prepend @$glCanvas
+    @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
 
     # Setting up AR scaling
     @qrWidth = @qrScale * @qrMetricWidth
 
-    # Initializing the printer's orientation. TODO: This is definitely a work in progress.
-    #@printerMat4.$translate 0, 0, 3
-    #@printerMat4.$rotateXYZ 0, 0, 0
-
     # WebGL overlay
-    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
-    $video.parent().prepend @$glCanvas
     PhiloGL @$glCanvas.attr("id"), @_webGlSettings = @webGlSettings()
 
+  onLoad: (app) => requestAnimationFrame =>
+    @app = app
+    @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
+
+    #console.log app
+
+    # WebGL settings
+    #@gl.clearColor(1, 1, 1, 1)
+    @gl.clearColor(0, 0, 0, 1)
+    @gl.clearDepth(1)
+    @gl.enable(@gl.CULL_FACE)
+    @gl.enable(@gl.DEPTH_TEST)
+    @gl.depthFunc(@gl.LEQUAL)
+    @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
+    @gl.enable(@gl.BLEND)
+    @gl.disable(@gl.DEPTH_TEST)
+
+    # Camera + Scene config
+    @camera.target.set(0,0,-1)
+    @camera.update()
+
+    # Initializing models (because philoGL doesn't yet do this for us)
+    @addModel(k, opts) for k, opts of @webGlSettings().models
+
+    # GCode parsing
+    gcodeUtils.parse @gcode, (cmd, axes) => @gcodeLines.lineTo(axes)
+    delete @gcode
+    @gcodeLines.updateLines()
+
+    # Augmented Reality config
+    @$video = $("video").on
+      'ar:orientaionchange': @onArOrientationChange
+      'ar:videoresize': (e, t) => @tracer = t; @resize()
+    @$video.arTracer qr: {metricWidth: @qrMetricWidth}, enabled: @arEnabled
+
+    # Init
+    @update()
+    @requestRender()
+    @resize()
+    @render()
+
   loadModel: (name, opts) -> P3D.loadBinaryStl opts.url, undefined, (verts, normals, indices) =>
-    #console.log "loaded!"
-    #console.log normals
-    #console.log verts
-    #o3d.normals.set normals
     opts.vertices = verts
     opts.normals = normals
     opts.indices = indices
@@ -162,51 +198,6 @@ class Viewer
       @scene.add o3d
       @requestRender()
 
-
-  onLoad: (app) => requestAnimationFrame =>
-    @app = app
-    @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
-
-    #console.log app
-
-    # WebGL settings
-    #@gl.clearColor(1, 1, 1, 1)
-    @gl.clearColor(0, 0, 0, 1)
-    @gl.clearDepth(1)
-    @gl.enable(@gl.CULL_FACE)
-    @gl.enable(@gl.DEPTH_TEST)
-    @gl.depthFunc(@gl.LEQUAL)
-    @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
-    @gl.enable(@gl.BLEND)
-    @gl.disable(@gl.DEPTH_TEST)
-
-    # Camera + Scene config
-    @camera.position.set 0, 0, 100 # TODO: temporary printer matrix work around
-    @camera.target.set(0,0,0)
-    @camera.update()
-
-    # Initializing models (because philoGL doesn't yet do this for us)
-    @addModel(k, opts) for k, opts of @webGlSettings().models
-
-    # GCode parsing
-    gcodeUtils.parse @gcode, (cmd, axes) => @gcodeLines.lineTo(axes)
-    delete @gcode
-    @gcodeLines.updateLines()
-
-    #@scene.add(@[k]) for k, opts of @webGlSettings().models
-
-    # Augmented Reality config
-    @$video = $("video").on
-      'ar:orientaionchange': @onArOrientationChange
-      'ar:videoresize': (e, t) => @tracer = t; @resize()
-    @$video.arTracer qr: {metricWidth: @qrMetricWidth}, enabled: @arEnabled
-
-    # Init
-    @update()
-    @requestRender()
-    @resize()
-    @render()
-
   setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
   onDragMove: (e) =>
     mouse = {x: e.x - @mouseOffset.x, y: e.y - @mouseOffset.y}
@@ -217,6 +208,12 @@ class Viewer
     rot.x = ( rot.x - mouse.y/100 )
     rot.x = Math.max Math.PI, Math.min(rot.x, Math.PI*2)
 
+    @update()
+    @requestRender()
+
+  onMouseWheel: (e) =>
+    @position.z = Math.max -500, Math.min -1, @position.z - e.wheel*10
+    
     @update()
     @requestRender()
 
@@ -258,9 +255,9 @@ class Viewer
     model.position = @position
     model.update()
 
-  renderLines: => #if @gcodeLines.vertices.length > 0
-    #console.log "line render!"
-    #console.log @gcodeLines.$verticesLength
+  renderLines: => if @gcodeLines.vertices.length > 0
+    console.log "line render!"
+    console.log @gcodeLines.$verticesLength
     #console.log @gcodeLines.$indicesLength * 3 / 2
     #@gl.drawArrays(@gl.LINES, 0, @gcodeLines.$verticesLength / 3)
 
