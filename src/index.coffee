@@ -1,16 +1,15 @@
 require 'longjohn'
 require 'sugar'
-express = require 'express'
-stylus = require 'stylus'
+
+# Importing our NPM libraries. TODO: How could this be made more DRY in a standard way?
+globalRequire = () -> for requirement in arguments
+  GLOBAL[requirement] = require requirement
+
+globalRequire 'express', 'stylus', 'http', 'util', 'fs'
+restler = require '../node_modules/restler/lib/restler'
 assets = require 'connect-assets'
-http = require 'http'
-util = require 'util'
-rest = require '../node_modules/restler/lib/restler'
-redback = require('redback').createClient()
-fs = require('fs')
 
-printer = redback.createHash('printer')
-
+# Initializing the app
 app = express()
 app.use express.compress()
 # Add Connect Assets
@@ -24,38 +23,9 @@ app.use express.cookieParser()
 # Set View Engine
 app.set 'view engine', 'jade'
 
-# Routing
-app.get '/', (req, resp) -> resp.render 'index'
-
-
-jog = (req, resp, next) ->
-  axis = req.param('axis')
-  distance = req.param('distance')
-  speed = req.param('speed')
-
-  url = "http://admin:password@localhost:4311/move/axis/#{axis}/#{distance}/#{speed*60}"
-
-  rest.get(url).on "success", (data, res) ->
-    console.log data
-    next()
-
-app.put '/jog', jog, (req, resp) -> resp.send 200
-
-
-uploadPrintJob = (req, resp, next) ->
-  console.log req.files
-  files = req.files.printjobs
-  next()
-  if false
-    url = "http://admin:password@localhost:4311/printbutton"
-    # TODO: File uploads
-    data = filename: "./test.gcode"
-
-    rest.get(url).on "success", data: data, (data, res) ->
-      console.log data
-      next()
-
-app.post '/print_jobs/', uploadPrintJob, (req, resp) -> resp.send 200
+# Routes and Models
+models = require('./models')
+require('./routes').call(models, app)
 
 # Define Port
 port = process.env.PORT or process.env.VMC_APP_PORT or 3009

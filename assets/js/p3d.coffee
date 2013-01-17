@@ -2,7 +2,7 @@ debug = true
 
 window.P3D =
 
-  loadBinaryStl: (url, opts = {center: false}, callback) ->
+  loadBinaryStl: (url, callback) ->
     P3D.ajax url: url, binary: true, (response) ->
       data = new DataStream response, 80, true
 
@@ -24,7 +24,6 @@ window.P3D =
         verts[i*9+j] =   data.readFloat32()     for j in [0..8]
         data.readUint16() # 2 byte "attributes byte count"
 
-      P3D.postProcess verts, normals, indices, opts
       callback verts, normals, indices
 
   ajax: (opts, callback) ->
@@ -34,23 +33,3 @@ window.P3D =
     xhr.onload = (e) -> callback xhr.response
     xhr.send()
 
-  postProcess: (verts, normals, indices, opts) ->
-    # Finding the max and min points
-    max = ( Number.MIN_VALUE for i in [0..2])
-    min = ( Number.MAX_VALUE for i in [0..2])
-
-    for i in [0 .. verts.length-1] by 3
-      for j in [0..2]
-        max[j] = verts[i+j] if verts[i+j] > max[j]
-        min[j] = verts[i+j] if verts[i+j] < min[j]
-
-    # Finding the object's center
-    center = ( (max[i] + min[i])/2 for i in [0..2] )
-
-    # Centering the object
-    if opts.center
-      verts[i+j] = verts[i+j] - center[j] for j in [0..2] for i in [0 .. verts.length-1] by 3
-
-    #console.log min
-    #console.log max
-    #console.log center

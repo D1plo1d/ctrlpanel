@@ -3,7 +3,10 @@ class O3D.PolyLine extends O3D.Model
   position: {x:0, y:0, z:0}
   _lines: { vertices: [], indices: [] }
 
-  constructor: (opts) -> O3D.Model.call @, opts
+  constructor: (opts) ->
+    opts.vertices = []
+    opts.indices = []
+    O3D.Model.call @, opts
 
   lineTo: (p2) =>
     i = @_lines.indices.last() || 0

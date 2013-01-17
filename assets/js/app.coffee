@@ -20,7 +20,10 @@ $ ->
   $sidePanelLinks = $("#manual_ctrl .side-panel h4 a")
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
-  $.get "/40mmcube.gcode", (gcode) -> new Viewer($("video"), gcode)
+  viewer = new Viewer $("video"), ->
+    $.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
+    #viewer.loadModel("/40mmcube.stl") # TODO: we need compute normals for this model to work
+    viewer.loadModel("/ultimaker_platform.stl")
 
 
 class Viewer
@@ -34,10 +37,11 @@ class Viewer
   arEnabled: false
   mode: "gcode" # gcode | mixed | model # (TODO)
 
+  buildVolume: [210, 210, 220]
+  mmToGLCoords = 0.1
+
   rotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
   position: new PhiloGL.Vec3(0, -5, -70)
-
-  printerMat4: new PhiloGL.Mat4()
 
   commonUniforms:
     shininess: 10,
@@ -61,10 +65,38 @@ class Viewer
           color: { r: 0.3, g: 0.3, b: 0.3 }
           direction: { x: 0.5, y: -0.3, z: -1 }
     models:
+      model:
+        display: true
+        class: PhiloGL.O3D.Model
+        dynamic: true
+        vertices: []
+        indices: []
+        position: [0, 0, 0]
+        rotation: [0, 0, 0]
+        scale: ( mmToGLCoords * 0.5 for i in [0..2] )
+        #scale: ( mmToGLCoords for i in [0..2] )
+        colors: [32/255, 77/255, 37/255, 1]
+        uniforms: @commonUniforms
+        init: (o3d) ->
+          # TODO: autoposition this object by offsetting it by it's lowest vert
+          verts = o3d.$vertices
+          offset = [0, 0, 0]
+          min = ( Number.MAX_VALUE for i in [0..2])
+          max = ( Number.MIN_VALUE for i in [0..2])
+          for i in [0..verts.length-1] by 3
+            for j in [0..2]
+              min[j] = verts[i+j] if verts[i+j] < min[j]
+              max[j] = verts[i+j] if verts[i+j] > max[j]
+          center = ( (max[i] + min[i])/2 for i in [0..2] )
+          for i in [0..verts.length-1] by 3
+            verts[i+2] -= min[2]
+            for j in [1..2]
+              verts[i+j] -= center[j]
       gcodeLines:
         display: true
         class: PhiloGL.O3D.PolyLine
         colors: [1, 0, 1, 1]
+        scale: (mmToGLCoords for dimension in @buildVolume)
         uniforms: @commonUniforms
         render: @renderLines
       arMarker:
@@ -97,7 +129,7 @@ class Viewer
         display: true
         class: PhiloGL.O3D.Cube
         position: [0, 0, 0]
-        scale: [10, 10, 10]
+        scale: (dimension/2 * mmToGLCoords for dimension in @buildVolume)
         indices: [
           2, 1, 0, 3, 2, 0,
           6, 5, 4, 7, 6, 4,
@@ -122,8 +154,8 @@ class Viewer
 
   # Viewer Methods
 
-  constructor: ($video, gcode) ->
-    @gcode = gcode
+  constructor: ($video, callback) ->
+    @_onLoadCallback = callback
     @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
     $video.parent().prepend @$glCanvas
     @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
@@ -146,22 +178,17 @@ class Viewer
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
+    #@gl.depthMask(true)
     @gl.depthFunc(@gl.LEQUAL)
     @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
     @gl.enable(@gl.BLEND)
-    @gl.disable(@gl.DEPTH_TEST)
 
     # Camera + Scene config
     @camera.target.set(0,0,-1)
     @camera.update()
 
     # Initializing models (because philoGL doesn't yet do this for us)
-    @addModel(k, opts) for k, opts of @webGlSettings().models
-
-    # GCode parsing
-    gcodeUtils.parse @gcode, (cmd, axes) => @gcodeLines.lineTo(axes)
-    delete @gcode
-    @gcodeLines.updateLines()
+    @addToScene(k, opts) for k, opts of @webGlSettings().models
 
     # Augmented Reality config
     @$video = $("video").on
@@ -174,18 +201,12 @@ class Viewer
     @requestRender()
     @resize()
     @render()
+    @_onLoadCallback()
 
-  loadModel: (name, opts) -> P3D.loadBinaryStl opts.url, undefined, (verts, normals, indices) =>
-    opts.vertices = verts
-    opts.normals = normals
-    opts.indices = indices
-    delete opts.url
-    @addModel name, opts
-    @update()
-
-  addModel: (name, opts) ->
+  # Adds a o3d to the scene by generating it based on the opts
+  addToScene: (name, opts) ->
     if opts.url?
-      @loadModel name, opts
+      @loadToScene name, opts
     else
       @[name] = o3d = new opts.class opts
       o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
@@ -197,6 +218,29 @@ class Viewer
       o3d.update()
       @scene.add o3d
       @requestRender()
+
+  # Adds a o3d to the scene by ajax loading it, parsing it and then generating it based on the opts
+  loadToScene: (name, opts) -> P3D.loadBinaryStl opts.url, (verts, normals, indices) =>
+    opts.vertices = verts
+    opts.normals = normals
+    opts.indices = indices
+    delete opts.url
+    @addToScene name, opts
+    @update()
+
+  setGCode: (gcode) ->
+    # GCode parsing
+    gcodeUtils.parse gcode, (cmd, axes) => @gcodeLines.lineTo(axes)
+    @gcodeLines.updateLines()
+    @requestRender()
+
+  loadModel: (url) -> P3D.loadBinaryStl url, (verts, normals, indices) =>
+    @scene.remove @model
+    m = @webGlSettings().models.model
+    m.vertices = verts
+    m.normals = normals
+    m.indices = indices
+    @addToScene("model", m)
 
   setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
   onDragMove: (e) =>
@@ -231,13 +275,20 @@ class Viewer
 
   requestRender: -> @dirty = true
 
+  onBeforeRender: (elem, i) =>
+    # Making the model opaque
+    isOpaque = elem == @model
+    console.log isOpaque
+    @gl.depthMask isOpaque
+    @gl[if isOpaque then "disable" else "enable"](@gl.BLEND)
+
   render: =>
     if @dirty == true
       #console.log "Draw!"
       # Clear Screen
       @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
       # Draw everything
-      @scene.render()
+      @scene.render(onBeforeRender: @onBeforeRender)
 
     @dirty = false
     requestAnimationFrame @render
@@ -249,15 +300,16 @@ class Viewer
     @update()
     @render()
 
-  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker]
+  update: (t, r) -> for model in [@platform, @gcodeLines, @model, @cube, @arMarker]
     continue unless model?
     model.rotation = @rotation
     model.position = @position
     model.update()
 
   renderLines: => if @gcodeLines.vertices.length > 0
-    console.log "line render!"
-    console.log @gcodeLines.$verticesLength
+    return
+    #console.log "line render!"
+    #console.log @gcodeLines.$verticesLength
     #console.log @gcodeLines.$indicesLength * 3 / 2
     #@gl.drawArrays(@gl.LINES, 0, @gcodeLines.$verticesLength / 3)
 
