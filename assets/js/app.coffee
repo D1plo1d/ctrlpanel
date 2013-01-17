@@ -60,9 +60,9 @@ class Viewer
     scene:
       lights:
         enable: true
-        ambient: { r: 1, g: 1, b: 1 }
+        ambient: { r: 0.6, g: 0.6, b: 0.6 }
         directional:
-          color: { r: 0.3, g: 0.3, b: 0.3 }
+          color: { r: 0.1, g: 0.1, b: 0.1 }
           direction: { x: 0.5, y: -0.3, z: -1 }
     models:
       model:
@@ -138,7 +138,45 @@ class Viewer
           18, 17, 16, 19, 18, 16,
           22, 21, 20, 23, 22, 20
         ]
-        colors: [39/255, 137/255, 250/255, 0.5]
+        normals: [
+          # Front face
+          0.0,  0.0,  -1.0,
+          0.0,  0.0,  -1.0,
+          0.0,  0.0,  -1.0,
+          0.0,  0.0,  -1.0,
+
+          # Back face
+          0.0,  0.0, 1.0,
+          0.0,  0.0, 1.0,
+          0.0,  0.0, 1.0,
+          0.0,  0.0, 1.0,
+
+          # Top face
+          0.0,  -1.0,  0.0,
+          0.0,  -1.0,  0.0,
+          0.0,  -1.0,  0.0,
+          0.0,  -1.0,  0.0,
+
+          # Bottom face
+          0.0, 1.0,  0.0,
+          0.0, 1.0,  0.0,
+          0.0, 1.0,  0.0,
+          0.0, 1.0,  0.0,
+
+          # Right face
+          -1.0,  0.0,  0.0,
+          -1.0,  0.0,  0.0,
+          -1.0,  0.0,  0.0,
+          -1.0,  0.0,  0.0,
+
+          # Left face
+          1.0,  0.0,  0.0,
+          1.0,  0.0,  0.0,
+          1.0,  0.0,  0.0,
+          1.0,  0.0,  0.0
+        ]
+        colors: [37*1.3/255, 117*1.3/255, 189*1.3/255, 0.7] #0088cc with 10% more saturation
+        #colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
         init: (o3d) ->
           verts = o3d.$vertices
@@ -174,13 +212,18 @@ class Viewer
 
     # WebGL settings
     #@gl.clearColor(1, 1, 1, 1)
-    @gl.clearColor(0, 0, 0, 1)
+    #@gl.clearColor(0, 0, 0, 0)
+    @gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
     #@gl.depthMask(true)
     @gl.depthFunc(@gl.LEQUAL)
-    @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
+    #@gl.blendFunc(@gl.ONE_MINUS_SRC_ALPHA, @gl.ONE)
+    #@gl.blendFunc(@gl.SRC_ALPHA, @gl.ZERO)
+    #@gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE)
+    #@gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE_MINUS_SRC_ALPHA)
+    @gl.blendFunc(@gl.SRC_ALPHA, @gl.ONE_MINUS_SRC_ALPHA)
     @gl.enable(@gl.BLEND)
 
     # Camera + Scene config
