@@ -20,8 +20,28 @@ $ ->
   $sidePanelLinks = $("#manual_ctrl .side-panel h4 a")
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
-  viewer = new Viewer $("video").parent(), ->
+  $(".modal .canvas-container").viewer (viewer) ->
     #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
     #viewer.loadModel("/40mmcube.stl") # TODO: we need compute normals for this model to work
     #viewer.loadModel("/ultimaker_platform.stl")
-    viewer.loadModel("/DNA_Righthanded.stl")
+    #viewer.loadModel("/DNA_Righthanded.stl")
+
+
+  # New print job modal
+
+  # Show the file dialog when the new print job button is clicked
+  $(".btn-new-print-job").on "click", ->
+    $("#new-print-job-modal .cad-files").click()
+  # Show the print dialog when a file is selected
+  $("#new-print-job-modal .cad-files").on "change", -> if @files.length > 0
+    ###
+    reader = new FileReader()
+    reader.onload = () ->
+      url = reader.result
+      $("#new-print-job-modal .canvas-container").viewer "loadModel", url
+      $("#new-print-job-modal").modal("show")
+    reader.readAsDataURL @files[0]
+    ###
+    console.log @files[0]
+    $("#new-print-job-modal .canvas-container").viewer "loadModel", @files[0]
+    $("#new-print-job-modal").modal("show")

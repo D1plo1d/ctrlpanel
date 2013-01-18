@@ -1,18 +1,27 @@
+$.fn.viewer = (opts) ->
+  args = arguments
+  @.each (i, el) ->
+    $el = $(el)
+    if (typeof opts) == "string"
+      console.log "mooo"
+      viewer = $el.data("viewer")
+      console.log args
+      viewer[args[0]].apply viewer, [args[1]]
+    else
+      $el.data "viewer", new Viewer $el, opts
+  return @
+
 class window.Viewer
 
   # Configuration and WebGL settings
+  initDefaults: ->
+    @mode = "gcode" # gcode | mixed | model # (TODO)
 
-  gcodeScale: 0.3
-  qrMetricWidth: 35.0
-  qrScale: 0.55 # Horray for totally bs scaling factors!
+    @buildVolume = [210, 210, 220]
+    @mmToGLCoords = 0.1
 
-  mode: "gcode" # gcode | mixed | model # (TODO)
-
-  buildVolume: [210, 210, 220]
-  mmToGLCoords = 0.1
-
-  rotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-  position: new PhiloGL.Vec3(0, -5, -70)
+    @rotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
+    @position = new PhiloGL.Vec3(0, -10, -70)
 
   commonUniforms:
     shininess: 10
@@ -43,7 +52,7 @@ class window.Viewer
         indices: []
         position: [0, 0, 0]
         rotation: [0, 0, 0]
-        scale: ( mmToGLCoords for i in [0..2] )
+        scale: ( @mmToGLCoords for i in [0..2] )
         #scale: ( mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
@@ -64,10 +73,10 @@ class window.Viewer
             for j in [0..1]
               verts[i+j] -= center[j]
       gcodeLines:
-        display: true
+        display: false
         class: PhiloGL.O3D.PolyLine
         colors: [1, 0, 1, 1]
-        scale: (mmToGLCoords for dimension in @buildVolume)
+        scale: (@mmToGLCoords for dimension in @buildVolume)
         uniforms: @commonUniforms
         render: @renderLines
       platform:
@@ -75,7 +84,7 @@ class window.Viewer
         class: PhiloGL.O3D.Model
         url: "/ultimaker_platform.stl"
         scale: [0.1, 0.1, 0.1]
-        colors: [0.2, 0.2, 0.2, 0.6]
+        colors: [0.2, 0.2, 0.2, 0.55]
         uniforms: @commonUniforms
         init: (o3d) =>
           verts = o3d.$vertices
@@ -86,7 +95,7 @@ class window.Viewer
         class: PhiloGL.O3D.Cube
         position: [0, 0, 0]
         texCoords: []
-        scale: (dimension/2 * mmToGLCoords for dimension in @buildVolume)
+        scale: (dimension/2 * @mmToGLCoords for dimension in @buildVolume)
         colors: [0/255, 20/255, 240/255, 0.3]
         uniforms: @commonUniforms
         init: (o3d) ->
@@ -104,9 +113,11 @@ class window.Viewer
   # Viewer Methods
 
   constructor: ($container, callback) ->
+    @initDefaults()
     @_onLoadCallback = callback
-    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>").attr style: "z-index: 10; position: absolute"
+    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>")
     $container.prepend @$glCanvas
+    console.log $container
     @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
 
     # WebGL overlay
@@ -120,7 +131,7 @@ class window.Viewer
 
     # WebGL settings
     #@gl.clearColor(1, 1, 1, 1)
-    #@gl.clearColor(0, 0, 0, 0)
+    #@gl.clearColor(0, 0, 0, 1)
     @gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
@@ -146,7 +157,7 @@ class window.Viewer
     @requestRender()
     @resize()
     @render()
-    @_onLoadCallback()
+    @_onLoadCallback(@)
 
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
@@ -161,6 +172,7 @@ class window.Viewer
       opts.init(o3d) if opts.init?
       o3d.update()
       @scene.add o3d
+      @update()
       @requestRender()
 
   # Adds a o3d to the scene by ajax loading it, parsing it and then generating it based on the opts
@@ -170,7 +182,6 @@ class window.Viewer
     opts.indices = indices
     delete opts.url
     @addToScene name, opts
-    @update()
 
   setGCode: (gcode) ->
     # GCode parsing
@@ -207,7 +218,7 @@ class window.Viewer
 
   resize: ->
     console.log "Resize!"
-    @size = width: @$glCanvas.parent().innerWidth(), height: @$glCanvas.closest(".row").innerHeight()
+    @size = width: @$glCanvas.parent().innerWidth(), height: @$glCanvas.parent().innerHeight()
     #@size = @tracer.size
     @$glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)

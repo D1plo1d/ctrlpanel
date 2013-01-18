@@ -18,9 +18,24 @@ eachLine = (str, callback) ->
 
 window.P3D =
 
-  loadStl: (url, callback) ->
-    stringXhr = P3D.ajax url: url
-    interval = setInterval ( -> P3D._waitForStlHeader stringXhr, interval, url, callback ), 10
+  loadStl: (src, callback) ->
+    if typeof(src) == "string" # load from URL
+      stringXhr = P3D.ajax url: src
+      interval = setInterval ( -> P3D._waitForStlHeader stringXhr, interval, src, callback ), 10
+    else # load from local file (HTML5 file API)
+      console.log src
+      console.log typeof src
+      textReader = new FileReader()
+      textReader.onload = () ->
+        text = textReader.result
+        isBinary = text[0..80].match(/^solid /) == null
+        if isBinary
+          binaryReader = new FileReader()
+          binaryReader.onload = () -> P3D.parseBinaryStl binaryReader.result, callback
+          binaryReader.readAsArrayBuffer src
+        else
+          P3D.parseTextStl text, callback
+      textReader.readAsText src
 
   _waitForStlHeader: (xhr, interval, url, callback) -> 
     return unless (text = xhr.responseText).length > 80

@@ -1,0 +1,29 @@
+#new-print-job-modal
+  display -webkit-flex
+  -webkit-flex-flow column
+
+  &.hide
+    left: -10000000px
+
+  .modal-body, .modal-footer
+    display: block
+
+  .modal-body
+    // external col flex
+    -webkit-flex 1 1 auto
+    max-height initial
+    height auto
+    // internal row flex
+    display -webkit-flex
+    -webkit-flex-flow row
+    -webkit-box-direction: reverse
+
+  .canvas-container
+    -webkit-flex 1 1 auto
+
+  .options
+    z-index: 10
+    width: 40%
+    border-left 1px solid #CCC
+    padding-left 20px
+

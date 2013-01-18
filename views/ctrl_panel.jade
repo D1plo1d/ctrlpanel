@@ -80,15 +80,13 @@ mixin more
             input(type='text', value=0)
             span.add-on &deg;C
 
-.row
-  .span3.side-panel
-    mixin jog_panel("xy", "icon-fullscreen", {up: ['y', -1], left: ['x', -1], right: ['x', +1], down: ['y', +1]})
-    mixin jog_panel("z", "icon-resize-vertical", {up: ['z', -1], down: ['z', +1]})
-    mixin temperature_panel
-    mixin extruders_panel
-  .span9.canvas-container
-    video
-  - //TODO: fan, conveyor, home
+.side-panel
+  mixin jog_panel("xy", "icon-fullscreen", {up: ['y', -1], left: ['x', -1], right: ['x', +1], down: ['y', +1]})
+  mixin jog_panel("z", "icon-resize-vertical", {up: ['z', -1], down: ['z', +1]})
+  mixin temperature_panel
+  mixin extruders_panel
+.canvas-container
+- //TODO: fan, conveyor, home
 
 | <script id="shader-vs" type="x-shader/x-vertex">
 include ../assets/shaders/shader.vs.glsl

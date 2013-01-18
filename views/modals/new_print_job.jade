@@ -1,0 +1,15 @@
+#new-print-job-modal.modal.fade
+  .modal-body
+    .canvas-container
+    .options
+      h3 Print Options
+      .form.form-horizontal
+        .control-group
+          .control-label Scale
+          .controls
+            input(type="number", value=1.0, step=0.1)
+          input.cad-files.hide(type="file")
+
+  .modal-footer
+    a.btn(href="#", data-dismiss="modal", aria-hidden=true) Cancel
+    a.btn.btn-primary(href="#", data-dismiss="modal", aria-hidden=true) 3D Print
