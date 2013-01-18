@@ -23,7 +23,8 @@ $ ->
   viewer = new Viewer $("video"), ->
     $.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
     #viewer.loadModel("/40mmcube.stl") # TODO: we need compute normals for this model to work
-    viewer.loadModel("/ultimaker_platform.stl")
+    #viewer.loadModel("/ultimaker_platform.stl")
+    viewer.loadModel("/DNA_Righthanded.stl")
 
 
 class Viewer
@@ -62,8 +63,8 @@ class Viewer
         enable: true
         ambient: { r: 0.6, g: 0.6, b: 0.6 }
         directional:
-          color: { r: 0.1, g: 0.1, b: 0.1 }
-          direction: { x: 0.5, y: -0.3, z: -1 }
+          color: { r: 0.2, g: 0.2, b: 0.2 }
+          direction: { x: -0.5, y: -0.3, z: -1 }
     models:
       model:
         display: true
@@ -73,7 +74,7 @@ class Viewer
         indices: []
         position: [0, 0, 0]
         rotation: [0, 0, 0]
-        scale: ( mmToGLCoords * 0.5 for i in [0..2] )
+        scale: ( mmToGLCoords for i in [0..2] )
         #scale: ( mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
@@ -88,9 +89,10 @@ class Viewer
               min[j] = verts[i+j] if verts[i+j] < min[j]
               max[j] = verts[i+j] if verts[i+j] > max[j]
           center = ( (max[i] + min[i])/2 for i in [0..2] )
+          console.log min
           for i in [0..verts.length-1] by 3
             verts[i+2] -= min[2]
-            for j in [1..2]
+            for j in [0..1]
               verts[i+j] -= center[j]
       gcodeLines:
         display: true
@@ -100,7 +102,7 @@ class Viewer
         uniforms: @commonUniforms
         render: @renderLines
       arMarker:
-        display: false
+        display: true
         class: PhiloGL.O3D.Model
         vertices: [
           -1.0, -1.0,  0.0,
@@ -113,6 +115,14 @@ class Viewer
         #scale: [0.1 ,0.1 , 2]
         colors: [0.5, 0.5, 1, 0.5]
         indices: [0, 1, 3, 3, 2, 0]
+        normals: [
+          0,0,-1,
+          0,0,-1,
+          0,0,-1
+          0,0,-1
+          0,0,-1
+          0,0,-1
+        ]
         uniforms: @commonUniforms
       platform:
         display: true
@@ -126,57 +136,14 @@ class Viewer
           offset = [0, @webGlSettings().models.cube.scale[1] / o3d.scale.y, 0]
           verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
       cube:
-        display: true
+        display: false
         class: PhiloGL.O3D.Cube
         position: [0, 0, 0]
+        texCoords: []
         scale: (dimension/2 * mmToGLCoords for dimension in @buildVolume)
-        indices: [
-          2, 1, 0, 3, 2, 0,
-          6, 5, 4, 7, 6, 4,
-          10, 9, 8, 11, 10, 8,
-          14, 13, 12, 15, 14, 12,
-          18, 17, 16, 19, 18, 16,
-          22, 21, 20, 23, 22, 20
-        ]
-        normals: [
-          # Front face
-          0.0,  0.0,  -1.0,
-          0.0,  0.0,  -1.0,
-          0.0,  0.0,  -1.0,
-          0.0,  0.0,  -1.0,
-
-          # Back face
-          0.0,  0.0, 1.0,
-          0.0,  0.0, 1.0,
-          0.0,  0.0, 1.0,
-          0.0,  0.0, 1.0,
-
-          # Top face
-          0.0,  -1.0,  0.0,
-          0.0,  -1.0,  0.0,
-          0.0,  -1.0,  0.0,
-          0.0,  -1.0,  0.0,
-
-          # Bottom face
-          0.0, 1.0,  0.0,
-          0.0, 1.0,  0.0,
-          0.0, 1.0,  0.0,
-          0.0, 1.0,  0.0,
-
-          # Right face
-          -1.0,  0.0,  0.0,
-          -1.0,  0.0,  0.0,
-          -1.0,  0.0,  0.0,
-          -1.0,  0.0,  0.0,
-
-          # Left face
-          1.0,  0.0,  0.0,
-          1.0,  0.0,  0.0,
-          1.0,  0.0,  0.0,
-          1.0,  0.0,  0.0
-        ]
-        colors: [37*1.3/255, 117*1.3/255, 189*1.3/255, 0.7] #0088cc with 10% more saturation
-        #colors: [32/255, 77/255, 37/255, 1]
+        #colors: [37*1.3/255, 117*1.3/255, 189*1.3/255, 0.7] #0088cc with 10% more saturation
+        #colors: [0.2, 0.2, 0.2, 0.5]
+        colors: [0.5, 0.5, 1, 0.5]
         uniforms: @commonUniforms
         init: (o3d) ->
           verts = o3d.$vertices
@@ -256,14 +223,13 @@ class Viewer
       #console.log "#{name} start"
       #console.log o3d
       #console.log "#{name} end"
-      # o3d.parentMatrix = @printerMat4 #TODO!
       opts.init(o3d) if opts.init?
       o3d.update()
       @scene.add o3d
       @requestRender()
 
   # Adds a o3d to the scene by ajax loading it, parsing it and then generating it based on the opts
-  loadToScene: (name, opts) -> P3D.loadBinaryStl opts.url, (verts, normals, indices) =>
+  loadToScene: (name, opts) -> P3D.loadStl opts.url, (verts, normals, indices) =>
     opts.vertices = verts
     opts.normals = normals
     opts.indices = indices
@@ -277,7 +243,7 @@ class Viewer
     @gcodeLines.updateLines()
     @requestRender()
 
-  loadModel: (url) -> P3D.loadBinaryStl url, (verts, normals, indices) =>
+  loadModel: (url) -> P3D.loadStl url, (verts, normals, indices) =>
     @scene.remove @model
     m = @webGlSettings().models.model
     m.vertices = verts
@@ -321,7 +287,8 @@ class Viewer
   onBeforeRender: (elem, i) =>
     # Making the model opaque
     isOpaque = elem == @model
-    console.log isOpaque
+    isOpaque = true
+    #console.log isOpaque
     @gl.depthMask isOpaque
     @gl[if isOpaque then "disable" else "enable"](@gl.BLEND)
 
