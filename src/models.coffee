@@ -10,16 +10,30 @@ class PrintDriver
       callback()
 
 class PrintQueue
-  constructor: (d) -> @driver = driver
+  constructor: (d) ->
+    @driver = driver
+    @printJobs = []
 
   add: (files, callback) ->
     #TODO: put the files in a temp folder
-    callback()
+    #callback()
+    uploads = path.resolve __dirname, "..", "uploads"
+    fs.mkdirp uploads, ->
+      # TODO: for each uploaded file
+      f = files
+      f.path
+      # TODO: proper rename the file with a UUID name
+      newPath = path.resolve uploads, "thing.stl"
+      # copy the temp file to the uploads folder
+      #fs.copy f.path, newPath, ->
+      #  @printJobs.push newPath
+      #  @print(callback)
 
-  print: ->
+  print: (callback) ->
     url = "http://admin:password@localhost:4311/printbutton"
     # TODO: get the next file in the queue
-    data = filename: "./test.gcode"
+    data = filename: @printJobs.pop()
+    console.log "printing #{data.filename}"
 
     rest.get(url).on "success", data: data, (data, res) ->
       console.log data

@@ -5,7 +5,8 @@ require 'sugar'
 globalRequire = () -> for requirement in arguments
   GLOBAL[requirement] = require requirement
 
-globalRequire 'express', 'stylus', 'http', 'util', 'fs'
+globalRequire 'express', 'stylus', 'http', 'util'
+GLOBAL.fs = require 'fs-extra'
 restler = require '../node_modules/restler/lib/restler'
 assets = require 'connect-assets'
 

@@ -22,18 +22,27 @@ PrintQueue = (function() {
 
   function PrintQueue(d) {
     this.driver = driver;
+    this.printJobs = [];
   }
 
   PrintQueue.prototype.add = function(files, callback) {
-    return callback();
+    var uploads;
+    uploads = path.resolve(__dirname, "..", "uploads");
+    return fs.mkdirp(uploads, function() {
+      var f, newPath;
+      f = files;
+      f.path;
+      return newPath = path.resolve(uploads, "thing.stl");
+    });
   };
 
-  PrintQueue.prototype.print = function() {
+  PrintQueue.prototype.print = function(callback) {
     var data, url;
     url = "http://admin:password@localhost:4311/printbutton";
     data = {
-      filename: "./test.gcode"
+      filename: this.printJobs.pop()
     };
+    console.log("printing " + data.filename);
     return rest.get(url).on("success", {
       data: data
     }, function(data, res) {

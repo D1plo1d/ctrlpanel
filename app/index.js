@@ -15,7 +15,9 @@ globalRequire = function() {
   return _results;
 };
 
-globalRequire('express', 'stylus', 'http', 'util', 'fs');
+globalRequire('express', 'stylus', 'http', 'util');
+
+GLOBAL.fs = require('fs-extra');
 
 restler = require('../node_modules/restler/lib/restler');
 

@@ -18,8 +18,6 @@ module.exports = function(app) {
     });
   });
   return app.post('/print_jobs/', function(req, resp, next) {
-    return _this.queue.add(req.files.printjobs, function() {
-      return resp.send(200);
-    });
+    return console.log(req.files);
   });
 };
