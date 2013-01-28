@@ -168,16 +168,17 @@ class window.P3D
     @normals = new Float32Array @nOfTriangles*9
     @vertices = @verts = new Float32Array @nOfTriangles*9
     if nOfIndices?
-      @indices = new Uint16Array nOfIndices
+      @indices = new Uint32Array nOfIndices
     else
-      indices = @indices = new Uint16Array @nOfTriangles*3
-      indices[i] = i for i in [0 .. @nOfTriangles*3]
+      indices = @indices = new Uint32Array @nOfTriangles*3
+      indices[i] = i for i in [0 .. indices.length]
     return [@normals, @verts, @indices]
 
   _parse: (data) ->
     console.log "Parsing #{@filename} as #{@_dataTypeInfo()} #{@fileType.toUpperCase()}.." if debug
     @["_parse#{@dataType}#{@fileType}"](data)
     @_eachFace @_calculateVertexNormals
+    @split()
     console.log "Parsing #{@filename} as #{@_dataTypeInfo()} #{@fileType.toUpperCase()}.. [ DONE ]" if debug
     @callback @
 
@@ -236,45 +237,12 @@ class window.P3D
         vectorStrings = line.split(/\s/)[1..]
         throw "Parsing Error: #{vectorStrings.length} vector vertex" if vectorStrings.length != 3
         for s in vectorStrings
-          #if index > (152905-1)
-          #verts[normalCount*3 + vertCount] = parseFloat(s)
-          #vertCount = (vertCount + 1) % 3
-          #verts[vertCount+6] = v = parseFloat(s)
-          verts[vertCount] = v = parseFloat(s)
+          verts[vertCount++] = v = parseFloat(s)
           throw "Parsing Error: Vertex vector ##{vertCount} is not a number" if isNaN(v) or !isFinite(v)
-          #verts[vertCount] = parseFloat(s)
-          vertCount += 1
-          #verts[(normalCount-1)*3 + (index-1)%7] = parseFloat(s)
-          #verts[vertCount++] = if index < 152900 then 0 else parseFloat(s)
-          #console.log "wut" if index > 152920
-          #console.log vertCount
-          ###
-          if 152900-1 < index
-            console.log verts[196609-1] #-4.810000e+00 
-          if index == 152919#152900 < index < 152950
-            console.log "------------------------"
-            console.log index/7*9
-            console.log vertCount
-            console.log vertCount+1
-            console.log s
-            console.log verts[vertCount-1]
-            console.log verts[196614-1]
-          #console.log s if index == 152918 or index == 152919
-          #console.log verts[vertCount-1] if index == 152918 or index == 152919
-          ###
       else if line.length > 0
         return if startsWith(line, k) for k in ignoredPrefixes
         throw "Parsing Error: Invalid Line \n #{line}"
       undefined # not returning the comprehension
-
-    console.log verts[196609-1] #-4.810000e+00 
-    #console.log @verts[196614-1]
-    #console.log normals
-    #console.log nOfTriangles
-    #console.log normalCount/9
-    #console.log vertCount/9
-    #console.log verts
-    #console.log verts[vertCount-1]
 
 
   # Exporting Methods
@@ -347,14 +315,13 @@ class window.P3D
     bytesPerMesh = Math.pow(2,16) # is this even in bytes!?
     bytesPerMesh -= bytesPerMesh % 9 # Rounding the bytes per mesh down to the nearest face
 
-    for startIndex in [0..@indices.length-1] by bytesPerMesh/3
-      oldIndices = @indices.subarray startIndex, startIndex + bytesPerMesh/3
+    @chunks = for startIndex in [0..@indices.length-1] by bytesPerMesh
+      oldIndices = @indices.subarray startIndex, startIndex + bytesPerMesh
       opts = indices: new Uint16Array(oldIndices.length), vertices: [], normals: []
       opts.indices[i] = i for i in [0..opts.indices.length-1]
 
       for oldIndex, newIndex in oldIndices
         for k in [0..2]
-          true
           opts.vertices[newIndex*3+k] = @vertices[oldIndex*3+k]
           opts.normals[ newIndex*3+k] = @normals[ oldIndex*3+k]
       opts[k] = new Float32Array(opts[k]) for k in ['vertices', 'normals']

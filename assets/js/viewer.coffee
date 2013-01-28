@@ -21,8 +21,8 @@ class window.Viewer
     @mmToGLCoords = 0.1
 
     @rotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-    #@position = new PhiloGL.Vec3(0, -10, -70)
-    @position = new PhiloGL.Vec3(0, 0, -70)
+    @position = new PhiloGL.Vec3(0, -10, -70)
+    #@position = new PhiloGL.Vec3(0, 0, -70)
     @model = []
 
   commonUniforms:
@@ -82,7 +82,7 @@ class window.Viewer
         uniforms: @commonUniforms
         render: @renderLines
       platform:
-        display: false
+        display: true
         class: PhiloGL.O3D.Model
         url: "/ultimaker_platform.stl"
         scale: [0.1, 0.1, 0.1]
@@ -93,7 +93,7 @@ class window.Viewer
           offset = [0, @webGlSettings().models.cube.scale[1] / o3d.scale.y, 0]
           verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
       cube:
-        display: false
+        display: true
         class: PhiloGL.O3D.Cube
         position: [0, 0, 0]
         texCoords: []
@@ -134,8 +134,8 @@ class window.Viewer
 
     # WebGL settings
     #@gl.clearColor(1, 1, 1, 1)
-    @gl.clearColor(0, 0, 0, 1)
-    #@gl.clearColor(1, 1, 1, 1)
+    #@gl.clearColor(0, 0, 0, 1)
+    @gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
@@ -184,7 +184,7 @@ class window.Viewer
 
   # Adds a o3d to the scene by ajax loading it, parsing it and then generating it based on the opts
   loadToScene: (name, opts) -> new P3D opts.url, (p3d) =>
-    opts[k] = p3d[k] for k in["vertices", "normals", "indices"]
+    opts[k] = p3d.chunks[0][k] for k in["vertices", "normals", "indices"]
     delete opts.url
     @addToScene name, opts
 
@@ -200,6 +200,9 @@ class window.Viewer
     @scene.remove m for m in @model
     @model = []
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
+    $(".local-download-link").attr
+      href: window.webkitURL.createObjectURL p3d.exportTextStl()
+      download: name
 
     # getting the object properties. TODO: move this to p3d
     verts = p3d.vertices
@@ -214,14 +217,8 @@ class window.Viewer
     console.log min
 
     # Add each chunk to the scene. TODO: refactor p3d to be able to include multiple chunks in one p3d object
-    chunks = p3d.split()
-    console.log "#{chunks.length} chunk(s)"
-    #chunks = [chunks[chunks.length-1]]
-    #chunks = [chunks[0]]
-    #chunks = [chunks[1]]
-    #chunks = [chunks[2]]
-    #chunks = [chunks[3]]
-    for chunk in chunks
+    console.log "#{p3d.chunks.length} chunk(s)"
+    for chunk in p3d.chunks
       opts = @webGlSettings().models.model
       opts[k] = chunk[k] for k in["vertices", "normals", "indices"]
 
@@ -289,7 +286,7 @@ class window.Viewer
     @dirty = false
     requestAnimationFrame @render
 
-  update: (t, r) -> for model in @model#[@platform, @gcodeLines, @cube, @arMarker].concat @model
+  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker].concat @model
     continue unless model?
     model.rotation = @rotation
     model.position = @position
