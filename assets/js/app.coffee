@@ -27,16 +27,17 @@ $ ->
       #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
       #viewer.loadModel("/40mmcube.stl") # TODO: we need compute normals for this model to work
       #viewer.loadModel("/DNA_Righthanded.stl")
-      viewer.loadModel("/polysoup-fixed.stl")
+      #viewer.loadModel("/polysoup-fixed.stl")
       #viewer.loadModel("/low-poly-ball.stl")
       #viewer.loadModel("/10242-vert-ball.stl")
       #viewer.loadModel("/40962-vert-ball.stl")
       #viewer.loadModel("/high-poly-ball.stl")
+      viewer.loadModel("/chair.stl")
 
   else
     # New print job modal
     $(".modal .canvas-container").viewer ->
-      console.log "w00t"
+      #console.log "w00t"
 
     # Show the file dialog when the new print job button is clicked
     $(".btn-new-print-job").on "click", ->

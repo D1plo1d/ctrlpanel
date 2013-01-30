@@ -3,18 +3,18 @@ $.fn.viewer = (opts) ->
   @.each (i, el) ->
     $el = $(el)
     if (typeof opts) == "string"
-      console.log "mooo"
       viewer = $el.data("viewer")
-      console.log args
       viewer[args[0]].apply viewer, [args[1]]
     else
       $el.data "viewer", new Viewer $el, opts
   return @
 
+viewerCount = 0
+
 class window.Viewer
 
   # Configuration and WebGL settings
-  initDefaults: ->
+  initDefaults: =>
     @mode = "gcode" # gcode | mixed | model # (TODO)
 
     @buildVolume = [210, 210, 220]
@@ -29,7 +29,8 @@ class window.Viewer
     shininess: 10
     hasTexture1: false
 
-  webGlSettings: -> @_webGlSettings ||=
+  webGlSettings: => @_webGlSettings ||=
+    #context: {debug: true}
     program:
       from: 'ids'
       vs: 'shader-vs'
@@ -69,7 +70,7 @@ class window.Viewer
               min[j] = verts[i+j] if verts[i+j] < min[j]
               max[j] = verts[i+j] if verts[i+j] > max[j]
           center = ( (max[i] + min[i])/2 for i in [0..2] )
-          console.log min
+          #console.log min
           for i in [0..verts.length-1] by 3
             verts[i+2] -= min[2]
             for j in [0..1]
@@ -109,7 +110,7 @@ class window.Viewer
       onDragMove: @onDragMove
       onMouseWheel: @onMouseWheel
     onError: (e) -> console.log("An error ocurred while loading the application"); console.log e
-    onLoad: @onLoad
+    onLoad: (app) => setTimeout @onLoad.fill(app), 0
 
 
   # Viewer Methods
@@ -117,15 +118,14 @@ class window.Viewer
   constructor: ($container, callback) ->
     @initDefaults()
     @_onLoadCallback = callback
-    @$glCanvas = $ $("<canvas id='webGlCanvas'></canvas>")
+    @$glCanvas = $ $("<canvas id='webGlCanvas#{viewerCount++}'></canvas>")
     $container.prepend @$glCanvas
-    console.log $container
     @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
 
     # WebGL overlay
     PhiloGL @$glCanvas.attr("id"), @_webGlSettings = @webGlSettings()
 
-  onLoad: (app) => requestAnimationFrame =>
+  onLoad: (app) =>
     @app = app
     @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
 
@@ -133,7 +133,6 @@ class window.Viewer
     #console.log app
 
     # WebGL settings
-    #@gl.clearColor(1, 1, 1, 1)
     #@gl.clearColor(0, 0, 0, 1)
     @gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
@@ -157,7 +156,6 @@ class window.Viewer
 
     # Init
     @update()
-    @requestRender()
     @resize()
     @render()
     @_onLoadCallback(@)
@@ -214,10 +212,9 @@ class window.Viewer
         min[j] = verts[i+j] if verts[i+j] < min[j]
         max[j] = verts[i+j] if verts[i+j] > max[j]
     center = ( (max[i] + min[i])/2 for i in [0..2] )
-    console.log min
 
     # Add each chunk to the scene. TODO: refactor p3d to be able to include multiple chunks in one p3d object
-    console.log "#{p3d.chunks.length} chunk(s)"
+    #console.log "#{p3d.chunks.length} chunk(s)"
     for chunk in p3d.chunks
       opts = @webGlSettings().models.model
       opts[k] = chunk[k] for k in["vertices", "normals", "indices"]
@@ -257,13 +254,13 @@ class window.Viewer
     @requestRender()
 
   resize: ->
-    console.log "Resize!"
+    #console.log "Resize!"
     @size = width: @$glCanvas.parent().innerWidth(), height: @$glCanvas.parent().innerHeight()
-    #@size = @tracer.size
     @$glCanvas.attr @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()
+    @requestRender()
 
   requestRender: -> @dirty = true
 
@@ -277,14 +274,15 @@ class window.Viewer
 
   render: =>
     if @dirty == true
-      #console.log "Draw!"
+      console.log "Draw!"
       # Clear Screen
       @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
       # Draw everything
       @scene.render(onBeforeRender: @onBeforeRender)
 
     @dirty = false
-    requestAnimationFrame @render
+    setTimeout @render, 1000/40
+    #requestAnimationFrame @render
 
   update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker].concat @model
     continue unless model?
