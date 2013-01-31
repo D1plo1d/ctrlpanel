@@ -288,26 +288,6 @@ class self.P3D.Parser
     @_eachFace @_calculateVertexNormals
     undefined # not returning the comprehension
 
-
-  ###_parseArrayBufferStl: (arrayBuffer) -> # binary stl format parser
-    data = new DataStream arrayBuffer, 80, true
-
-    # Header data
-    nOfTriangles = data.readUint32()
-    [normals, verts, indices] = @_initGeometry(nOfTriangles)
-    #console.log "#{nOfTriangles} triangles" if debug
-    #console.log "#{verts.length/3} verts" if debug
-
-    # Parsing the verts and normals of each triangle
-    for i in [0 .. nOfTriangles-1]
-      normals[i*9+j] = data.readFloat32()     for j in [0..2]
-      normals[i*9+3+j+k] = normals[i*9+j]     for j in [0..2] for k in [0,3,6]
-      verts[i*9+j] =   data.readFloat32()     for j in [0..8]
-      data.readUint16() # 2 byte "attributes byte count"
-    @_eachFace @_calculateVertexNormals
-    undefined # not returning the comprehension
-  ###
-
   _parseTextStl: (text) -> # text stl format parser
     prefixes = normal: "facet normal ", vert: "vertex "
     ignoredPrefixes = ["outer", "endloop", "endfacet", "endsolid"]
