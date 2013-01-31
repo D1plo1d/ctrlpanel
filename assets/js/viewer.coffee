@@ -4,7 +4,7 @@ $.fn.viewer = (opts) ->
     $el = $(el)
     if (typeof opts) == "string"
       viewer = $el.data("viewer")
-      viewer[args[0]].apply viewer, [args[1]]
+      viewer[args[0]].apply viewer, Array.prototype.slice.call(args)[1..]
     else
       $el.data "viewer", new Viewer $el, opts
   return @
@@ -192,7 +192,7 @@ class window.Viewer
     @gcodeLines.updateLines()
     @requestRender()
 
-  loadModel: (url) -> new P3D url, (p3d) =>
+  loadModel: (url, onLoadCallback) -> new P3D url, (p3d) =>
     # TODO: build a sphere with ~130k verts. If the 65k limit is screwing us it should only show one half of the sphere
     #console.log p3d.verts[196609+i] for i in [0..6] # -1.562000e+00
     @scene.remove m for m in @model
@@ -233,6 +233,7 @@ class window.Viewer
 
     @update()
     @requestRender()
+    onLoadCallback() if onLoadCallback?
 
   setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
   onDragMove: (e) =>

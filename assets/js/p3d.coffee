@@ -74,7 +74,7 @@ base64_encode = (data) ->
 # -----------------------------------------------------
 
 isWorker = (self.document == undefined)
-webWorkerAttrs = ['normals', 'verts', 'indices', 'nOfTriangles', 'chunks']
+webWorkerAttrs = ['normals', 'vertices', 'indices', 'nOfTriangles', 'chunks']
 if !isWorker
   webWorkerFn = arguments.callee
   # Getting a blob url reference to this script's closure
@@ -83,7 +83,7 @@ if !isWorker
     # Removing the closure from the worker's js because it caused syntax issues in chrome 24
     str = webWorkerFn.toString()
     str = str.replace(/^\s*function\s*\(\) {/, "").replace(/}\s*$/, '')
-  
+
     webWorkerBlob = new Blob [str], type: "text/javascript"
     @webWorkerURL = (window.URL || window.webkiURL).createObjectURL webWorkerBlob
 else
@@ -91,21 +91,13 @@ else
   data = null
   # Running a slave P3D instance in the webworker
   @onmessage = (event) ->
-    if (d = event.data) instanceof Array
-      parserPipeline = d
-    else
-      data = d
-    if parserPipeline? and data?
-      parser = new P3D.Parser()
-      # Parsing the data from it's raw format
-      parser[parserPipeline[0]](data)
-      # Running any post processing steps
-      parser[method]() for method in parserPipeline[1..]
-      #parser.split()
-      # Returning the data
-      msg = {}
-      msg[k] = parser[k] for k in webWorkerAttrs
-      postMessage msg
+    parser = new P3D.Parser(event.data)
+    # Returning the data
+    msg = {}
+    msg[k] = parser[k] for k in webWorkerAttrs
+    transfers = ( parser[k].buffer for k in ['normals', 'vertices', 'indices'] )
+    transfers.push chunk[k].buffer for k in ['normals', 'vertices', 'indices'] for chunk in parser.chunks
+    postMessage msg, transfers
 
 
 # P3D
@@ -219,40 +211,45 @@ class self.P3D
 
   _dataTypeInfo: -> if @dataType == 'Text' then 'Text' else 'Binary'
 
-  _parse: (data) ->
-    console.log "Parsing #{@filename} as #{@_dataTypeInfo().toLowerCase()} #{@fileType.toUpperCase()}.." if debug
-    if @opts.background == true and @dataType == 'Text'
-      console.log "Running as a background job"
-      @_parseInBackground(data)
+  _parsingDebugMsg: (done) -> if debug
+    if done == true
+      ms = new Date().getTime()
+      suffix = "[ DONE #{(ms - @_parserStartMs)/1000}s ]"
     else
-      parser = new P3D.Parser()
-      parser["_parse#{@dataType}#{@fileType}"](data)
-      parser.split()
-      @[k] = parser[k] for k in webWorkerAttrs
-      @vertices = @verts
+      @_parserStartMs = new Date().getTime()
+      suffix = ''
+    console.log "Parsing #{@filename} as #{@_dataTypeInfo().toLowerCase()} #{@fileType.toUpperCase()}.. #{suffix}"
 
-      console.log "Parsing #{@filename} as #{@_dataTypeInfo().toLowerCase()} #{@fileType.toUpperCase()}.. [ DONE ]" if debug
-      @callback @
-    ###for k in ['normals', 'vertices', 'indices', 'nOfTriangles']
-      console.log k
-      console.log @[k]###
+  _parse: (data) ->
+    @_parsingDebugMsg(false)
+    parserOpts = pipeline: ["_parse#{@dataType}#{@fileType}", "split"], data: data
+    if @opts.background == true
+      console.log "Running as a background job"
+      worker = new Worker webWorkerURL()
+      worker.onmessage = (e) => @_onParsingComplete(e.data)
+      worker.addEventListener "error", ((e) -> console.log e), false
+      worker.postMessage = worker.webkitPostMessage || worker.postMessage
+      worker.postMessage parserOpts, if @dataType == 'Text' then [] else [data]
+      # TODO: remove data parser dependancy. it is long and bloated and won't work in web workers.
+    else
+      @_onParsingComplete new P3D.Parser parserOpts
 
-  _parseInBackground: (data) ->
-    worker = new Worker webWorkerURL()
-    worker.onmessage = (e) =>
-      console.log e.data
-      @[k] = e.data[k] for k in webWorkerAttrs
-      @vertices = @verts
-      @callback @
-    worker.addEventListener "error", ((e) -> console.log e), false
-    worker.postMessage(["_parse#{@dataType}#{@fileType}", "split"])
-    worker.postMessage(data)
-    # TODO: remove data parser dependancy. it is long and bloated and won't work in web workers.
+  _onParsingComplete: (parser) ->
+    @[k] = parser[k] for k in webWorkerAttrs
+    @verts = @vertices
+    @_parsingDebugMsg(true)
+    @callback @
 
 
 # Parsing Methods (File API/AJAX agnostic)
 # ------------------------------------------------------
 class self.P3D.Parser
+  constructor: (opts) ->
+    # Parsing the data from it's raw format
+    @[opts.pipeline[0]](opts.data)
+    # Running any post processing steps
+    @[method]() for method in opts.pipeline[1..]
+
   # Initializing normals, verts and indices
   _initGeometry: (nOfTriangles, nOfIndices) ->
     @nOfTriangles = nOfTriangles
@@ -266,6 +263,33 @@ class self.P3D.Parser
     return [@normals, @verts, @indices]
 
   _parseArrayBufferStl: (arrayBuffer) -> # binary stl format parser
+    # Note: binary STLs are encoded as little endian
+    data = new DataView arrayBuffer, 80
+    dataPointer = 0
+
+    _read = (method, bytes) ->
+      val = data[method] dataPointer, true
+      dataPointer += bytes
+      return val
+    readFloat32 = -> _read "getFloat32", 4
+    readUint32 = ->  _read "getUint32", 4
+    readUint16 = ->  _read "getUint16", 2
+
+    # Header data
+    nOfTriangles = readUint32()
+    [normals, verts, indices] = @_initGeometry nOfTriangles
+
+    # Parsing the verts and normals of each triangle
+    for i in [0 .. nOfTriangles-1]
+      normals[i*9+j]     = readFloat32()  for j in [0..2]
+      normals[i*9+3+j+k] = normals[i*9+j] for j in [0..2] for k in [0,3,6]
+      verts[i*9+j]       = readFloat32()  for j in [0..8]
+      readUint16() # 2 byte "attributes byte count"
+    @_eachFace @_calculateVertexNormals
+    undefined # not returning the comprehension
+
+
+  ###_parseArrayBufferStl: (arrayBuffer) -> # binary stl format parser
     data = new DataStream arrayBuffer, 80, true
 
     # Header data
@@ -282,6 +306,7 @@ class self.P3D.Parser
       data.readUint16() # 2 byte "attributes byte count"
     @_eachFace @_calculateVertexNormals
     undefined # not returning the comprehension
+  ###
 
   _parseTextStl: (text) -> # text stl format parser
     prefixes = normal: "facet normal ", vert: "vertex "
