@@ -305,7 +305,6 @@ class self.P3D.Parser
 
     eachLine text, (line, index) ->
       return if index == 0 # skipping the header
-      #return if index < 152900
       # stripping whitespace
       line = line.replace(/^\s+|\s+$/g, '').replace(/\s{2,}/g, ' ').toLowerCase()
 
