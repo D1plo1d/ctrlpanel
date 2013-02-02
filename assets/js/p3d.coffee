@@ -22,11 +22,18 @@ fileExt = (str) -> str.split('.').pop()
 ajax = (opts, callback) ->
   xhr = new XMLHttpRequest()
   xhr.open("GET", opts.url, true)
-  xhr.responseType = "arraybuffer" if opts.binary == true
-  if callback?
-    xhr.onload = (e) -> callback xhr.response
+  xhr.responseType = "blob"
+  xhr.onload = ( -> callback xhr.response ) if callback?
   xhr.send()
   return xhr
+
+parseXml = (text) ->
+  if (self.DOMParser)
+    new DOMParser().parseFromString(text,"text/xml")
+  else # Internet Explorer
+    xmlDoc=new ActiveXObject("Microsoft.XMLDOM")
+    xmlDoc.async=false
+    xml.loadXML(text)
 
 base64_encode = (data) ->
   # http://kevin.vanzonneveld.net
@@ -104,7 +111,7 @@ else
 # -----------------------------------------------------
 class self.P3D
 
-  _fileTypeWhitelist: ["Stl"]
+  _fileTypeWhitelist: ["Stl", "Amf"]
 
   # Creates a P3D parser which loads the src url or HTML5 file object and 
   # fires the callback when it's geometry is ready
@@ -118,7 +125,7 @@ class self.P3D
   constructor: (src) ->
     @src = src
     args = arguments
-    @opts = if args.length > 2 then args[1] else {background: true}
+    @opts = if args.length > 2 then args[1] else {background: false}
     @callback = args[args.length-1]
 
     # Determining the file name and the file type
@@ -130,91 +137,42 @@ class self.P3D
 
     # Loading the object
     if typeof(@src) == "string" # load from URL
-      @_initTextXhr()
-    else # load from local file (HTML5 file API)
-      @_initReader "Text"
+      ajax url: @src, (response) => @_initReader "Text", response
+    else # load from local file or blob (HTML5 file API)
+      @_initReader "Text", @src
 
 
-  # File API/AJAX Load Methods
+  # Blob Loading
   # ------------------------------------------------------
 
-  _initReader: (type) ->
+  _initReader: (type, blob) ->
     @dataType = type
+    @blob = blob
     r = @reader = new FileReader()
     r.onload = @_onReaderLoad
-    r["readAs#{type}"] @src
+    r["readAs#{type}"] blob
+
+  _binaryStlCheck: (text) ->
+    @fileType == "Stl" and @dataType == "Text" and text[0..80].match(/^solid /) == null
 
   _onReaderLoad: () =>
     data = @reader.result
-    if @dataType == "Text" and @_isBinary data
-    #if typeof(data) == "string" and @_isBinary data
-      delete @reader
-      @_initReader "ArrayBuffer"
-    else
-      @_parse data
-
-  _initTextXhr: ->
-    @dataType = "Text"
-    @xhr = ajax url: @src
-    @xhrPollingInterval = setInterval @_waitForXhrHeader, 10
-
-  _initBinaryXhr: ->
-    @dataType = "ArrayBuffer"
-    ajax url: @src, binary: true, (response) => @_parse response
-
-  _waitForXhrHeader: => 
-    return unless @_hasHeaders(text = @xhr.responseText)
-    clearInterval @xhrPollingInterval
-    # If this is a binary file cancel the current text ajax request and start a binary ajax request
-    if @_isBinary(text)
-      @xhr.abort()
-      delete @xhr
-      @_initBinaryXhr()
-    # If this is a text stl wait for the current text ajax request to complete and then parse it
-    else if @xhr.readyState == @xhr.DONE
-      @_onXhrReadyStateChange()
-    else
-      @xhr.onreadystatechange = @_onXhrReadyStateChange
-
-  _onXhrReadyStateChange: => @_parse @xhr.responseText if @xhr.readyState == @xhr.DONE
-
-
-  # Exporting Methods
-  # ------------------------------------------------------
-
-  # TODO: This method only works for small objects with less then ~196614 verts. I don't know why.
-  exportTextStl: ->
-    str = "solid P3D\n"
-    formatFloat = (flt, i)-> (if sign(flt) >= 0 or i == 0 then " " else "") + flt.toExponential(6)
-    formatVector = (array, v) -> (formatFloat(array[i], if v then i else 1) for i in [0..2]).join(" ")
-
-    @_eachFace (f, i) ->
-      str += "  facet normal #{ formatVector f.normals[0], false }\n"
-      str += "    outer loop\n"
-      str += "      vertex #{ formatVector v, true }\n" for v in f.vertices
-      str += "    endloop\n"
-      str += "  endfacet\n"
-
-    str += "endsolid P3D"
-    str = str.replace(/e\+([0-9][^0-9])/g, "e+0$1")
-    str = str.replace(/e\-([0-9][^0-9])/g, "e-0$1")
-    return new Blob [str], type: "application/octet-stream"
+    delete @reader
+    # If the STL file turns out not to be a text file then reread it as an array buffer
+    return @_initReader("ArrayBuffer", @blob) if @_binaryStlCheck(data)
+    delete @blob
+    @_parse data
 
 
   # Parsing Interface (File API/AJAX agnostic)
   # ------------------------------------------------------
-  _hasStlHeaders: (text) -> text.length > 80
-  _isBinaryStl: (text) -> text[0..80].match(/^solid /) == null
-
-  _hasHeaders: (text) -> @["_has#{@fileType}Headers"](text)
-  _isBinary: (text) -> @["_isBinary#{@fileType}"](text)
 
   _dataTypeInfo: -> if @dataType == 'Text' then 'Text' else 'Binary'
 
   _parsingDebugMsg: (done) -> if debug
     if done == true
-      ms = new Date().getTime()
-      suffix = "[ DONE #{(ms - @_parserStartMs)/1000}s ]"
+      seconds = (new Date().getTime() - @_parserStartMs)/1000
+      suffix = "[ DONE #{seconds}s ]"
     else
       @_parserStartMs = new Date().getTime()
       suffix = ''
@@ -241,6 +199,29 @@ class self.P3D
     @callback @
 
 
+  # Exporting Methods
+  # ------------------------------------------------------
+
+  # TODO: This method only works for small objects with less then ~196614 verts. I don't know why.
+  # TODO: determine if this bug was solved with the uint16 indices fix
+  exportTextStl: ->
+    str = "solid P3D\n"
+    formatFloat = (flt, i)-> (if sign(flt) >= 0 or i == 0 then " " else "") + flt.toExponential(6)
+    formatVector = (array, v) -> (formatFloat(array[i], if v then i else 1) for i in [0..2]).join(" ")
+
+    @_eachFace (f, i) ->
+      str += "  facet normal #{ formatVector f.normals[0], false }\n"
+      str += "    outer loop\n"
+      str += "      vertex #{ formatVector v, true }\n" for v in f.vertices
+      str += "    endloop\n"
+      str += "  endfacet\n"
+
+    str += "endsolid P3D"
+    str = str.replace(/e\+([0-9][^0-9])/g, "e+0$1")
+    str = str.replace(/e\-([0-9][^0-9])/g, "e-0$1")
+    return new Blob [str], type: "application/octet-stream"
+
+
 # Parsing Methods (File API/AJAX agnostic)
 # ------------------------------------------------------
 class self.P3D.Parser
@@ -250,9 +231,15 @@ class self.P3D.Parser
     # Running any post processing steps
     @[method]() for method in opts.pipeline[1..]
 
+  _toMillimeters: (unitsOfMeasurement) ->
+    conversions = {mm: 1.0, millimeter: 1.0, meter: 1000.0, inch: 25.4, feet: 304.8, micron: 0.001}
+    scale = conversions[unitsOfMeasurement.toLowerCase()]
+    return scale if scale?
+    throw "#{unitsOfMeasurement} is not a known unit of measurement"
+
   # Initializing normals, verts and indices
   _initGeometry: (nOfTriangles, nOfIndices) ->
-    @nOfTriangles = nOfTriangles
+    @nOfTriangles = nOfTriangles # TODO: this is a bit of a misnomer, it's the number of verts / 3
     @normals = new Float32Array @nOfTriangles*9
     @vertices = @verts = new Float32Array @nOfTriangles*9
     if nOfIndices?
@@ -261,6 +248,75 @@ class self.P3D.Parser
       indices = @indices = new Uint32Array @nOfTriangles*3
       indices[i] = i for i in [0 .. indices.length]
     return [@normals, @verts, @indices]
+
+  #_parseTextAMF: (text) ->
+  # TODO: inflate the zip file here
+  # new Blob([arrayBuffer], "application/zip")
+
+  _parseTextAmf: (text) ->
+    window.xml = xml = parseXml text
+    root = xml.documentElement
+    xmlEval = (query) -> xml.evaluate query, xml, null, XPathResult.ANY_TYPE, null
+    read = (node, k) -> node.getElementsByTagName(k)[0].textContent
+    $ = (query, callback) ->
+      results = xmlEval query
+      while (node = results.iterateNext())?
+        callback(node)
+      undefined
+
+    # Scaling the object to mm
+    console.log xml
+    unitStr = root.getAttribute("unit") || root.getAttribute("units")
+    scale = @_toMillimeters unitStr
+    console.log scale
+
+    # initializing indice and vert counts
+    vertCount = 0; indiceCount = 0
+    nOfTriangles = xmlEval('count(//triangle)').numberValue
+    nOfVerts = xmlEval('count(//vertex)').numberValue
+    [normals, verts, indices] = @_initGeometry nOfVerts, nOfTriangles*3
+
+    # Parsing Vertices
+    $ "//vertex", (node) ->
+      coords = node.getElementsByTagName("coordinates")[0]
+      normalNodeList = node.getElementsByTagName("normal")
+      if normalNodeList.length == 1
+        n = for k, i in ['nx', 'ny', 'nz']
+          normals[vertCount+i] = parseFloat(read normalNodeList[0], k)
+      for k in ['x', 'y', 'z']
+        verts[vertCount++] = parseFloat(read coords, k) * scale
+
+    # Parsing Faces
+    $ "//triangle", (node) ->
+      indices[indiceCount++] = parseInt(read node, "v#{k}") for k in [1..3]
+
+    # Expanding (duplicating) the normals and verts so that there is a 1:1 of verts to indices
+    # This allows us to modify the normals on a per-face basis in edges and makes mesh spliting trivial
+    nOfTriangles = @nOfTriangles = indices.length/3 # TODO: when noftriangles is fixed this will be implicit
+    exp = {}
+    exp[attr] = new Float32Array(@nOfTriangles*9) for attr in ['vertices', 'normals']
+    @_eachFace (face, i) ->
+      console.log i
+      for attr in ['vertices', 'normals']
+        exp[attr][i*9+j*3+k] = face[attr][j][k] for j in [0..2] for k in [0..2]
+    indices[i] = i for i in [0..indices.length-1]
+    @[attr] = exp[attr] for attr in ['vertices', 'normals']
+    @verts = @vertices
+
+    # Define the normals for verts without a normal as the normal vector of the face
+    @_eachFace @_calculateVertexNormals
+
+    # Parsing Edges (TODO)
+    # $ "//edge", (node) ->
+    #  for k in ['v1', 'dx1', 'dy1', 'dz1', 'v2', 'dx2', 'dy2', 'dz2']
+    #    s = node.getElementsByTagName(k).textContent
+    #    verts[vertCount++] = parseFloat s
+    # TODO: eventually we will be able to pull normals from the AMF file
+    #@_eachFace @_calculateVertexNormals
+    undefined
+
+  _parseTextObj: (text) ->
+    # TODO!
 
   _parseArrayBufferStl: (arrayBuffer) -> # binary stl format parser
     # Note: binary STLs are encoded as little endian
@@ -281,16 +337,15 @@ class self.P3D.Parser
 
     # Parsing the verts and normals of each triangle
     for i in [0 .. nOfTriangles-1]
-      normals[i*9+j]     = readFloat32()  for j in [0..2]
-      normals[i*9+3+j+k] = normals[i*9+j] for j in [0..2] for k in [0,3,6]
-      verts[i*9+j]       = readFloat32()  for j in [0..8]
+      readFloat32()  for j in [0..2] # discard the STL's normals, we will calculate them later
+      verts[i*9+j] = readFloat32()  for j in [0..8]
       readUint16() # 2 byte "attributes byte count"
     @_eachFace @_calculateVertexNormals
     undefined # not returning the comprehension
 
   _parseTextStl: (text) -> # text stl format parser
     prefixes = normal: "facet normal ", vert: "vertex "
-    ignoredPrefixes = ["outer", "endloop", "endfacet", "endsolid"]
+    ignoredPrefixes = ["outer", "endloop", "facet", "endfacet", "endsolid"]
     normalCount = 0
     vertCount = 0
 
@@ -305,22 +360,21 @@ class self.P3D.Parser
 
     eachLine text, (line, index) ->
       return if index == 0 # skipping the header
-      # stripping whitespace
+      # Stripping whitespace
       line = line.replace(/^\s+|\s+$/g, '').replace(/\s{2,}/g, ' ').toLowerCase()
-
-      if startsWith line, prefixes.normal
-        faceNormals =  ( parseFloat(s) for s in line.split(" ")[2..] )
-        normals[normalCount++] = faceNormals[i] for i in [0..2] for k in [0,3, 6]
-      else if startsWith line, prefixes.vert
+      # Parsing verts
+      if startsWith line, prefixes.vert
         vectorStrings = line.split(/\s/)[1..]
         throw "Parsing Error: #{vectorStrings.length} vector vertex" if vectorStrings.length != 3
         for s in vectorStrings
           verts[vertCount++] = v = parseFloat(s)
           throw "Parsing Error: Vertex vector ##{vertCount} is not a number" if isNaN(v) or !isFinite(v)
+      # Catching invalid lines
       else if line.length > 0
         return if startsWith(line, k) for k in ignoredPrefixes
         throw "Parsing Error: Invalid Line \n #{line}"
       undefined # not returning the comprehension
+    # Calculating normals
     @_eachFace @_calculateVertexNormals
     undefined
 
@@ -329,17 +383,16 @@ class self.P3D.Parser
   # ---------------------------------------------------------------
 
   # iterates over all the faces of the mesh
-  _eachFace: (fn) ->
+  _eachFace: (fn) =>
     indices = @indices
-    normals = @normals
-    vertices = @vertices
     for i in [0..@indices.length-3] by 3
-      fIndices = indices.subarray i, i+3
-      fn
-        indices: fIndices
-        normals:  ( normals.subarray  index*3, index*3+3 for index in fIndices )
-        vertices: ( vertices.subarray index*3, index*3+3 for index in fIndices )
+      fn @_face(indices.subarray i, i+3), i/3
     undefined# not returning the comprehension
+
+  _face: (fIndices) ->
+    indices: fIndices
+    normals:  ( @normals.subarray  index*3, index*3+3 for index in fIndices )
+    vertices: ( @vertices.subarray index*3, index*3+3 for index in fIndices )
 
   _flipFace: (f) ->
     firstIndex   = f.indices[0]
@@ -358,8 +411,10 @@ class self.P3D.Parser
     # scaling the normal vector into a unit normal vector
     len = Math.sqrt vN[0]*vN[0] + vN[1]*vN[1] + vN[2]*vN[2]
     vN[i] = vN[i]/len for i in [0..2]
-    # overwriting the previous normals
-    f.normals[i][j] = vN[j] for j in [0..2] for i in [0..2]
+    # overwriting the previous normals only if they were undefined
+    for i in [0..2]
+      if f.normals[i][0] == 0 and f.normals[i][1] == 0 and f.normals[i][2] == 0
+        f.normals[i][j] = vN[j] for j in [0..2]
 
   # Splits the object into 2^16 vert chunks and returns the chunks
   split: () =>
@@ -378,4 +433,4 @@ class self.P3D.Parser
       opts[k] = new Float32Array(opts[k]) for k in ['vertices', 'normals']
       opts
 
-P3D.prototype._eachFace = P3D.Parser.prototype._eachFace
+P3D.prototype[k] = P3D.Parser.prototype[k] for k in ["_eachFace", "_face"]
