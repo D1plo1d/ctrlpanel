@@ -33,8 +33,10 @@ class window.Viewer
     #context: {debug: true}
     program:
       from: 'ids'
-      vs: 'shader-vs'
-      fs: 'shader-fs'
+      #vs: 'shader-vs'
+      #fs: 'shader-fs'
+      vs: 'per-fragment-lighting-vs'
+      fs: 'per-fragment-lighting-fs'
     camera:
       fov:  40
       near: 1
