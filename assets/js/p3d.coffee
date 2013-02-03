@@ -273,10 +273,9 @@ class self.P3D.Parser
       undefined
 
     # Scaling the object to mm
-    console.log xml
+    #console.log xml
     unitStr = root.getAttribute("unit") || root.getAttribute("units")
     scale = @_toMillimeters unitStr
-    console.log scale
 
     # initializing indice and vert counts
     vertCount = 0; indiceCount = 0
@@ -310,7 +309,6 @@ class self.P3D.Parser
     # Adds a face's vertices and normals to the mesh at the given index
     addFace = (face, mesh, index) -> for attr in ['vertices', 'normals']
       mesh[attr][index+j*3+k] = face[attr][j][k] for j in [0..2] for k in [0..2]
-      
 
     # Expanding (duplicating) the normals and verts so that there is a 1:1 of verts to indices
     # This allows us to modify the normals on a per-face basis in edges and makes mesh spliting trivial
@@ -327,10 +325,9 @@ class self.P3D.Parser
 
     #return
     # Counting Curved Surfaces
-    subdivisionLevels = 1 # 4
+    subdivisionLevels = 4
     trianglesPerSurface = Math.pow 4, subdivisionLevels
-    @_eachFace (face) -> nOfTriangles += trianglesPerSurface if !isFlat face
-    console.log nOfTriangles*9
+    @_eachFace (face) -> ( nOfTriangles += trianglesPerSurface-1 if !isFlat face )
 
     # Subdividing Curved Surfaces
     exp[attr] = new Float32Array(nOfTriangles*9) for attr in ['vertices', 'normals']
@@ -348,9 +345,9 @@ class self.P3D.Parser
           crossProduct = cross cross(n[i], d), n[i]
           ( magnitude(d) * crossProduct[j] / magnitude(crossProduct) for j in [0..2] )
         midVerts.push v01 = hermiteSpline(0.5, v, t, fIndex)
-        midNormals.push n01 = [0, 0, 0]# TODO: how to calculate the normal!?
-        #console.log "-----------------------" if fIndex < 2
-        # console.log n01 if fIndex < 2
+        # TODO: these normals are probably only aproximately correct.
+        # What is the proper way to calculate these??
+        midNormals.push n01 = ( (n[1][i] + n[0][i])/2 for i in [0..2] )
 
       newFaces = for i in [0..2] # calculating the outer subdivided faces
         vertices: [ midVerts[i], midVerts[ j = (i+2)%3 ], face.vertices[i] ]
@@ -359,11 +356,6 @@ class self.P3D.Parser
       newFaces.push # calculating the center subdivided faces
         vertices: midVerts, normals: midNormals
 
-      # adding each subdivided face to the mesh
-      for f in newFaces
-        addFace f, exp, vertCount
-        #addFace face, exp, vertCount
-        vertCount += 9
       return newFaces
 
     # iterating through each original face and subdividing it if it is has non-uniform normals
@@ -374,16 +366,20 @@ class self.P3D.Parser
         vertCount += 9
       else
         faces = [face]
+        newFaces = []
         for i in [0..subdivisionLevels-1]
           newFaces = []
           for f in faces
             newFaces.push f2 for f2 in subdivide f, fIndex + Math.pow(4,i)
           faces = newFaces
+        # adding each subdivided face to the mesh
+        for f in newFaces
+          addFace f, exp, vertCount
+          #addFace face, exp, vertCount
+          vertCount += 9
 
-    console.log @vertices.length
-    console.log vertCount
-    console.log indices.length
-    @indices = @indices = new Float32Array(nOfTriangles*3)
+
+    indices = @indices = new Float32Array(nOfTriangles*3)
     @indices[i] = i for i in [0..@indices.length-1]
     @[attr] = exp[attr] for attr in ['vertices', 'normals']
     @verts = @vertices
@@ -506,7 +502,7 @@ class self.P3D.Parser
 
   # Splits the object into 2^16 vert chunks and returns the chunks
   split: () => # TODO: since each object's verts are 1:1 with indices at this point we can use monolithic subarrays here
-    console.log "splitting"
+    #console.log "splitting"
     bytesPerMesh = Math.pow(2,16) # is this even in bytes!?
     bytesPerMesh -= bytesPerMesh % 9 # Rounding the bytes per mesh down to the nearest face
 
