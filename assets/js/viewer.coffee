@@ -57,8 +57,8 @@ class window.Viewer
         indices: []
         position: [0, 0, 0]
         rotation: [0, 0, 0]
+        #scale: ( @mmToGLCoords*20 for i in [0..2] )
         scale: ( @mmToGLCoords for i in [0..2] )
-        #scale: ( mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
         init: (o3d) ->
@@ -201,7 +201,7 @@ class window.Viewer
     @model = []
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
     $(".local-download-link").attr
-      href: window.webkitURL.createObjectURL p3d.exportTextStl()
+      href: (window.webkitURL||window.URL).createObjectURL p3d.exportTextStl()
       download: name
 
     # getting the object properties. TODO: move this to p3d

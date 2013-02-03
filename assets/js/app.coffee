@@ -25,11 +25,12 @@ $ ->
   if true
     $("#manual_ctrl .canvas-container").viewer (viewer) ->
       #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
-      #viewer.loadModel("/40mmcube.stl") # TODO: we need compute normals for this model to work
+      #viewer.loadModel("/40mmcube.stl")
       #viewer.loadModel("/DNA_Righthanded.stl")
       #viewer.loadModel("/CurveEdgeTest.amf")
       #viewer.loadModel("/Rook_unzipped.amf")
-      viewer.loadModel("/Sphere20Face.amf")
+      #viewer.loadModel("/Sphere20Face.amf")
+      viewer.loadModel("/cow-nonormals.obj")
       #viewer.loadModel("/polysoup-fixed.stl")
       #viewer.loadModel("/low-poly-ball.stl")
       #viewer.loadModel("/10242-vert-ball.stl")
