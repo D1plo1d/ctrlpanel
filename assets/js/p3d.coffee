@@ -133,7 +133,7 @@ class self.P3D
   constructor: (src) ->
     @src = src
     args = arguments
-    @opts = if args.length > 2 then args[1] else {background: false}
+    @opts = if args.length > 2 then args[1] else {background: true}
     @callback = args[args.length-1]
 
     # Determining the file name and the file type
@@ -142,6 +142,8 @@ class self.P3D
 
     if @_fileTypeWhitelist.indexOf(@fileType) == -1
       throw "Unable to parse file extension or unsupported file extension: #{@fileType}"
+
+    @opts.background = false if @fileType == "Amf"
 
     # Loading the object
     if typeof(@src) == "string" # load from URL
@@ -277,7 +279,7 @@ class self.P3D.Parser
   # new Blob([arrayBuffer], "application/zip")
 
   _parseTextAmf: (text) ->
-    window.xml = xml = parseXml text
+    xml = parseXml text
     root = xml.documentElement
     xmlEval = (query) -> xml.evaluate query, xml, null, XPathResult.ANY_TYPE, null
     read = (node, k) -> node.getElementsByTagName(k)[0].textContent
@@ -441,7 +443,6 @@ class self.P3D.Parser
         for str in line.split(/\s/)[1..]
           @indices[indexCount++] = parseInt( str.split('/')[0] ) - 1
       undefined
-    console.log @indices
 
     @_expandVerts()
     # Calculating normals
