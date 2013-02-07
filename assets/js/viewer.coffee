@@ -168,7 +168,7 @@ class window.Viewer
     if opts.url?
       @loadToScene name, opts
     else
-      o3d = new opts.class opts
+      o3d = new (opts.class || PhiloGL.O3D.Model) opts
       @[name] = o3d if name?
       o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
       #console.log "#{name} start"

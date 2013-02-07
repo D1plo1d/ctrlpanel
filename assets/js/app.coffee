@@ -1,9 +1,27 @@
 #= require vendor/jquery-1.8.3.min
 #= require vendor/underscore-min
 #= require_tree vendor
+
+#= require philogl/src/core
+#= require philogl/src/webgl
+#= require philogl/src/math
+#= require philogl/src/event
+#= require philogl/src/program.js
+#= require philogl/src/io.js
+#= require philogl/src/camera.js
+#= require philogl/src/o3d.js
+#= require philogl/src/shaders.js
+#= require philogl/src/scene.js
+#= require philogl/src/workers.js
+#= require philogl/src/fx.js
+#= require philogl/src/media.js
+
 #= require_tree models
 #= require_tree views
-#= require_tree ./
+
+#= require o3dExtensions
+#= require p3d
+#= require viewer
 
 $ ->
 
@@ -21,7 +39,6 @@ $ ->
   $sidePanelLinks.on "click", -> $sidePanelLinks.not($ this).popover("hide")
 
 
-  
   if true
     $("#manual_ctrl .canvas-container").viewer (viewer) ->
       #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
@@ -38,7 +55,8 @@ $ ->
       #viewer.loadModel("/high-poly-ball.stl")
       #viewer.loadModel("/chair.stl")
 
-  else
+  #else
+  if true then setTimeout.fill(undefined, 1000) ->
     # New print job modal
     $(".modal .canvas-container").viewer ->
       #console.log "w00t"

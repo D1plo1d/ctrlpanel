@@ -1,3 +1,6 @@
 [submodule "drivers/printrun"]
 	path = drivers/printrun
 	url = git://github.com/kliment/Printrun.git
+[submodule "assets/js/vendor/philogl"]
+	path = assets/js/philogl
+	url = git@github.com:D1plo1d/philogl.git
