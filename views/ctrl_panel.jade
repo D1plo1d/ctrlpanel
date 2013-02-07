@@ -35,7 +35,13 @@ mixin extruders_panel
     mixin title("Extruders", "icon-tint")
     each extruder in ["PLA Extruder", "ABS Extruder"]
       .side-row
-        .btn.pull-right Start
+        .btn-group.pull-right
+          .btn
+            .icon-arrow-up
+            | Retract
+          .btn
+            .icon-arrow-down
+            | Extrude
         .subtitle.pull-right
         .title= extruder
     
