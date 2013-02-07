@@ -53,7 +53,6 @@ mixin extruders_panel
 mixin temperature_panel
   .temperature-panel
     mixin title("Temperature Control", "icon-bar-chart")
-    a.local-download-link.pull-right(href="#") Download STL
     each extruder in ["PLA Extruder", "ABS Extruder", "Platform"]
       .side-row
         .toggle-btn.pull-right
