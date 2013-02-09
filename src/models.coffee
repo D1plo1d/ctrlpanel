@@ -1,3 +1,5 @@
+rest = require '../node_modules/restler/lib/restler'
+
 #redback = require('redback').createClient()
 #printer = redback.createHash('printer')
 
@@ -15,19 +17,9 @@ class PrintQueue
     @printJobs = []
 
   add: (files, callback) ->
-    #TODO: put the files in a temp folder
-    #callback()
-    uploads = path.resolve __dirname, "..", "uploads"
-    fs.mkdirp uploads, ->
-      # TODO: for each uploaded file
-      f = files
-      f.path
-      # TODO: proper rename the file with a UUID name
-      newPath = path.resolve uploads, "thing.stl"
-      # copy the temp file to the uploads folder
-      #fs.copy f.path, newPath, ->
-      #  @printJobs.push newPath
-      #  @print(callback)
+    @printJobs.push files.path
+    @print(callback)
+    #callback?()
 
   print: (callback) ->
     url = "http://admin:password@localhost:4311/printbutton"
@@ -35,9 +27,9 @@ class PrintQueue
     data = filename: @printJobs.pop()
     console.log "printing #{data.filename}"
 
-    rest.get(url).on "success", data: data, (data, res) ->
+    rest.get(url, data: data).on "success", (data, res) ->
       console.log data
-      callback()
+      callback?()
 
 module.exports =
   driver: ( driver = new PrintDriver() )

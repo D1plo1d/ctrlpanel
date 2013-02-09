@@ -7,7 +7,6 @@ globalRequire = () -> for requirement in arguments
 
 globalRequire 'express', 'stylus', 'http', 'util'
 GLOBAL.fs = require 'fs-extra'
-restler = require '../node_modules/restler/lib/restler'
 assets = require 'connect-assets'
 
 # Initializing the app
@@ -18,7 +17,8 @@ app.use assets()
 # Set the public folder as static assets
 app.use express.static(process.cwd() + '/public')
 
-app.use express.bodyParser keepExtensions: true, uploadDir: "#{__dirname}/uploads", hash: "sha1"
+fs.mkdir uploadDir = "#{__dirname}/../uploads"
+app.use express.bodyParser keepExtensions: true, uploadDir: uploadDir, hash: "sha1"
 app.use express.cookieParser()
 
 # Set View Engine

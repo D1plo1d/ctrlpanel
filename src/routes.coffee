@@ -7,6 +7,8 @@ module.exports = (app) ->
     @driver.jog opts, -> resp.send 200
 
   app.post '/print_jobs/', (req, resp, next) =>
+    console.log req.files.cadFiles
     #resp.send 500 unless req.files?
-    console.log req.files
-    #@queue.add req.files.printjobs, -> resp.send 200
+    #console.log req.files
+    @queue.add req.files.cadFiles, -> resp.send 200
+    #resp.send 200

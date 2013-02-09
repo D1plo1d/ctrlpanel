@@ -51,7 +51,7 @@ $ ->
       #viewer.loadModel("/Rook_unzipped.amf")
       #viewer.loadModel("/Sphere20Face.amf")
       #viewer.loadModel("/cow-nonormals.obj")
-      viewer.loadModel("/polysoup-fixed.stl")
+      #viewer.loadModel("/polysoup-fixed.stl")
       #viewer.loadModel("/low-poly-ball.stl")
       #viewer.loadModel("/10242-vert-ball.stl")
       #viewer.loadModel("/40962-vert-ball.stl")
@@ -74,6 +74,17 @@ $ ->
         $("body").unmask()
         $("#new-print-job-modal").removeClass("hide").modal("show")
     # Start the print when the print button is clicked
-    $("#new-print-job-modal .btn-confirm-print-job").on "click", ->
-      $("#new-print-job-modal form").submit()
-      #$.ajax "/print_jobs/", type: 'POST', data: data, success: (data) -> console.log data
+    $("#new-print-job-modal .btn-confirm-print-job").on "click", (e) ->
+      formData = new FormData $("#new-print-job-modal form")[0]
+      console.log formData
+      #$.post "/print_jobs/", formData
+      $.ajax
+        url: "/print_jobs/"
+        type: 'POST'
+        data: formData
+        cache: false
+        processData : false
+        contentType : false
+      console.log e
+      e.preventDefault()
+      return false
