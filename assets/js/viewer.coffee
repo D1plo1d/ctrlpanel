@@ -23,7 +23,6 @@ class window.Viewer
     @rotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
     @position = new PhiloGL.Vec3(0, -10, -70)
     #@position = new PhiloGL.Vec3(0, 0, -70)
-    @model = []
 
   commonUniforms:
     shininess: 10
@@ -51,32 +50,17 @@ class window.Viewer
     models:
       model:
         display: true
-        class: PhiloGL.O3D.Model
+        class: PhiloGL.O3D.P3DModel
         dynamic: true
         vertices: []
         indices: []
+        normals: []
         position: [0, 0, 0]
         rotation: [0, 0, 0]
         #scale: ( @mmToGLCoords*20 for i in [0..2] )
         scale: ( @mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
-        init: (o3d) ->
-          # TODO: autoposition this object by offsetting it by it's lowest vert
-          verts = o3d.$vertices
-          offset = [0, 0, 0]
-          min = ( Number.MAX_VALUE for i in [0..2])
-          max = ( Number.MIN_VALUE for i in [0..2])
-          for i in [0..verts.length-1] by 3
-            for j in [0..2]
-              min[j] = verts[i+j] if verts[i+j] < min[j]
-              max[j] = verts[i+j] if verts[i+j] > max[j]
-          center = ( (max[i] + min[i])/2 for i in [0..2] )
-          #console.log min
-          for i in [0..verts.length-1] by 3
-            verts[i+2] -= min[2]
-            for j in [0..1]
-              verts[i+j] -= center[j]
       gcodeLines:
         display: false
         class: PhiloGL.O3D.PolyLine
@@ -164,7 +148,7 @@ class window.Viewer
 
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
-    return if name == "model"
+    #return if name == "model"
     if opts.url?
       @loadToScene name, opts
     else
@@ -194,48 +178,36 @@ class window.Viewer
     @gcodeLines.updateLines()
     @requestRender()
 
-  loadModel: (url, onLoadCallback) -> new P3D url, (p3d) =>
-    # TODO: build a sphere with ~130k verts. If the 65k limit is screwing us it should only show one half of the sphere
-    #console.log p3d.verts[196609+i] for i in [0..6] # -1.562000e+00
-    @scene.remove m for m in @model
-    @model = []
+  loadModel: (url, onLoadCallback) -> @model.load url, (p3d) =>
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
     $(".local-download-link").attr
       href: (window.webkitURL||window.URL).createObjectURL p3d.exportTextStl()
       download: name
 
-    # getting the object properties. TODO: move this to p3d
-    verts = p3d.vertices
-    offset = [0, 0, 0]
+    # centering and z-aligning the object on top of the build platform
+    @_alignModel @model, x: @_center, y: @_center, z: @_bottom
+
+    @update()
+    @requestRender()
+    onLoadCallback?()
+
+  _center: [0.5, 0.5]
+  _bottom: [0, 1]
+  _alignModel: (model, opts = {x: @_center, y: @_center, z: @_center}) ->
+    verts = model.vertices
+
+    offset = null
     min = ( Number.MAX_VALUE for i in [0..2])
     max = ( Number.MIN_VALUE for i in [0..2])
     for i in [0..verts.length-1] by 3
       for j in [0..2]
         min[j] = verts[i+j] if verts[i+j] < min[j]
         max[j] = verts[i+j] if verts[i+j] > max[j]
-    center = ( (max[i] + min[i])/2 for i in [0..2] )
-
-    # Add each chunk to the scene. TODO: refactor p3d to be able to include multiple chunks in one p3d object
-    #console.log "#{p3d.chunks.length} chunk(s)"
-    for chunk in p3d.chunks
-      opts = @webGlSettings().models.model
-      opts[k] = chunk[k] for k in["vertices", "normals", "indices"]
-
-      # Update the position of each chunk so that it is positioned correctly
-      verts = opts.vertices
-      for i in [0..verts.length-1] by 3
-        verts[i+2] -= min[2]
-        for j in [0..1]
-          verts[i+j] -= center[j]
-
-      o3d = new opts.class opts
-      o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
-      @scene.add o3d
-      @model.push o3d
-
-    @update()
-    @requestRender()
-    onLoadCallback() if onLoadCallback?
+    offset = ( max[i]*opts[k][0] + min[i]*opts[k][1] for k, i in ['x','y','z'] )
+    for i in [0..verts.length-1] by 3
+      for j in [0..2]
+        verts[i+j] -= offset[j]
+    
 
   setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
   onDragMove: (e) =>
@@ -269,7 +241,7 @@ class window.Viewer
 
   onBeforeRender: (elem, i) =>
     # Making the model opaque
-    isOpaque = @model.indexOf(elem) != -1
+    isOpaque = @model == elem
     #isOpaque = true
     #console.log isOpaque
     @gl.depthMask isOpaque
@@ -287,7 +259,7 @@ class window.Viewer
     setTimeout @render, 1000/40
     #requestAnimationFrame @render
 
-  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker].concat @model
+  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker, @model]
     continue unless model?
     model.rotation = @rotation
     model.position = @position

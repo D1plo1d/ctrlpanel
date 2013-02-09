@@ -19,9 +19,12 @@
 #= require_tree models
 #= require_tree views
 
+#= require philogl_p3d_model
 #= require o3dExtensions
 #= require p3d
 #= require viewer
+
+P3D.debug = true
 
 $ ->
 
@@ -56,10 +59,9 @@ $ ->
       #viewer.loadModel("/chair.stl")
 
   #else
-  if true then setTimeout.fill(undefined, 1000) ->
+  if true
     # New print job modal
     $(".modal .canvas-container").viewer ->
-      #console.log "w00t"
 
     # Show the file dialog when the new print job button is clicked
     $(".btn-new-print-job").on "click", ->

@@ -1,5 +1,3 @@
-debug = true
-
 # Utils
 # -----------------------------------------------------
 
@@ -130,10 +128,9 @@ class self.P3D
   #  opts: (optional) a object containing properties for this parser
   #     background: (boolean) if true this parser will spawn a webworker and run outside the UI thread
   #  callback: the fn to run once the 3d geometry has been parsed
-  constructor: (src) ->
-    @src = src
+  constructor: (@src, @opts) ->
     args = arguments
-    @opts = if args.length > 2 then args[1] else {background: true}
+    @opts = {background: true} if args.length > 1 or !( @opts? )
     @callback = args[args.length-1]
 
     # Determining the file name and the file type
@@ -179,7 +176,7 @@ class self.P3D
 
   _dataTypeInfo: -> if @dataType == 'Text' then 'Text' else 'Binary'
 
-  _parsingDebugMsg: (done) -> if debug
+  _parsingDebugMsg: (done) -> if P3D.debug
     if done == true
       seconds = (new Date().getTime() - @_parserStartMs)/1000
       suffix = "[ DONE #{seconds}s ]"
@@ -553,3 +550,4 @@ class self.P3D.Parser
       opts
 
 P3D.prototype[k] = P3D.Parser.prototype[k] for k in ["_eachFace", "_face"]
+P3D.debug = false
