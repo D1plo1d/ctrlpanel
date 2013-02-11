@@ -82,6 +82,9 @@ task 'dev', 'start dev env', ->
   supervisor = spawn 'node', ['./node_modules/supervisor/lib/cli-wrapper.js','-w','app,views', '-e', 'js|jade', '--', '--debug', 'server']
   supervisor.stdout.pipe process.stdout
   supervisor.stderr.pipe process.stderr
+  for e in ["uncaughtException", "SIGINT", "SIGTERM"]
+    process.on e, -> supervisor.kill()
+  
   log 'Watching js files and running server', green
 
   
