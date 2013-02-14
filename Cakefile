@@ -1,7 +1,8 @@
-fs            = require 'fs'
-{print}       = require 'util'
-which         = require('which')
-{spawn, exec} = require 'child_process'
+fs             = require 'fs-extra'
+{print}        = require 'util'
+which          = require 'which'
+{spawn, exec}  = require 'child_process'
+assets         = require 'connect-assets'
 
 # ANSI Terminal Colors
 bold  = '\x1B[0;1m'
@@ -19,12 +20,44 @@ log = (message, color, explanation) ->
 
 # Compiles app.coffee and src directory to the app directory
 build = (callback) ->
+  compileApp -> buildAssets -> callback?()
+
+compileApp = (callback) ->
+  log 'Compiling CoffeeScripts..', ''
   options = ['-c','-b', '-o', 'app', 'src']
   cmd = which.sync 'coffee'
   coffee = spawn cmd, options
   coffee.stdout.pipe process.stdout
   coffee.stderr.pipe process.stderr
-  coffee.on 'exit', (status) -> callback?() if status is 0
+  coffee.on 'exit', (status) -> if status is 0
+    log 'Compiling CoffeeScripts..           [\x1B[0;32m DONE \x1B[0m]', ''
+    callback?()
+
+buildAssets = (options = {}, callback) ->
+  cleanAssets options, ->
+    _buildAssetsAfterCleaning options, callback
+
+cleanAssets = (options = {}, callback) ->
+  builtAssets = (options.buildDir || './builtAssets')
+  fs.exists builtAssets, (exists) ->
+    if exists
+      fs.remove fs.realpathSync(builtAssets), callback
+    else
+      callback?()
+
+_buildAssetsAfterCleaning = (options = {}, callback) ->
+  oldEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  options.build = true
+  options.minifyBuilds = false
+  options.buildFilenamer ?= (filename, code) -> filename
+  assets options
+  for [compiler, name] in [[css, 'CSS'], [js, 'JS ']]
+    log "PreCompiling #{name}..", ''
+    compiler 'app'
+    log "PreCompiling #{name}..                  [\x1B[0;32m DONE \x1B[0m]", ''
+  process.env.NODE_ENV = oldEnv
+  callback?()
 
 # mocha test
 test = (callback) ->
@@ -79,7 +112,8 @@ task 'dev', 'start dev env', ->
   coffee.stderr.pipe process.stderr
   log 'Watching coffee files', green
   # watch_js
-  supervisor = spawn 'node', ['./node_modules/supervisor/lib/cli-wrapper.js','-w','app,views', '-e', 'js|jade', '--', '--debug', 'server']
+  #supervisor = spawn 'node', ['./node_modules/supervisor/lib/cli-wrapper.js','-w','app,views', '-e', 'js|jade', '--', '--debug', 'server']
+  supervisor = spawn 'node', ['./node_modules/supervisor/lib/cli-wrapper.js','-w','app,views', '-e', 'js|jade', '--', 'server']
   supervisor.stdout.pipe process.stdout
   supervisor.stderr.pipe process.stderr
   for e in ["uncaughtException", "SIGINT", "SIGTERM"]

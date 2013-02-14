@@ -13,7 +13,9 @@ assets = require 'connect-assets'
 app = express()
 app.use express.compress()
 # Add Connect Assets
-app.use assets()
+isProduction = process.env.NODE_ENV == 'production'
+app.use assets build: false, src: if isProduction then "builtAssets" else "assets"
+
 # Set the public folder as static assets
 app.use express.static(process.cwd() + '/public')
 

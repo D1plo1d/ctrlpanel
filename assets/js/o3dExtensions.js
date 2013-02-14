@@ -20,7 +20,7 @@ console.log min
 console.log max
 #console.log center
 */
-
+/*
 computeNormals = function(onlyMissingNormals) {
   var nonZeroNormals, vA, vB, vC;
   for (i = 0; i < $vertices.length-1; i+=3)
@@ -46,3 +46,4 @@ computeNormals = function(onlyMissingNormals) {
     }
   }
 }
+*/

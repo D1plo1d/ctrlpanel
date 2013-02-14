@@ -2,23 +2,10 @@
 #= require vendor/underscore-min
 #= require_tree vendor
 
-#= require philogl/src/core
-#= require philogl/src/webgl
-#= require philogl/src/math
-#= require philogl/src/event
-#= require philogl/src/program.js
-#= require philogl/src/io.js
-#= require philogl/src/camera.js
-#= require philogl/src/o3d.js
-#= require philogl/src/shaders.js
-#= require philogl/src/scene.js
-#= require philogl/src/workers.js
-#= require philogl/src/fx.js
-#= require philogl/src/media.js
-
 #= require_tree models
 #= require_tree views
 
+#= require PhiloGL.cls
 #= require philogl_p3d_model
 #= require o3dExtensions
 #= require p3d
