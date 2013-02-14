@@ -109,7 +109,8 @@ else
     msg = {}
     msg[k] = parser[k] for k in webWorkerAttrs
     transfers = ( parser[k].buffer for k in ['normals', 'vertices', 'indices'] )
-    transfers.push chunk[k].buffer for k in ['normals', 'vertices', 'indices'] for chunk in parser.chunks
+    if parser.chunks?
+      transfers.push chunk[k].buffer for k in ['normals', 'vertices', 'indices'] for chunk in parser.chunks
     postMessage msg, transfers
 
 
@@ -130,7 +131,7 @@ class self.P3D
   #  callback: the fn to run once the 3d geometry has been parsed
   constructor: (@src, @opts) ->
     args = arguments
-    @opts = {background: true} if args.length > 1 or !( @opts? )
+    @opts = {background: true} if args.length < 3 or !( @opts? )
     @callback = args[args.length-1]
 
     # Determining the file name and the file type
@@ -152,12 +153,11 @@ class self.P3D
   # Blob Loading
   # ------------------------------------------------------
 
-  _initReader: (type, blob) ->
+  _initReader: (type, @blob) ->
     @dataType = type
-    @blob = blob
     r = @reader = new FileReader()
     r.onload = @_onReaderLoad
-    r["readAs#{type}"] blob
+    r["readAs#{type}"] @blob
 
   _binaryStlCheck: (text) ->
     @fileType == "Stl" and @dataType == "Text" and text[0..80].match(/^solid /) == null
@@ -167,7 +167,6 @@ class self.P3D
     delete @reader
     # If the STL file turns out not to be a text file then reread it as an array buffer
     return @_initReader("ArrayBuffer", @blob) if @_binaryStlCheck(data)
-    delete @blob
     @_parse data
 
 
@@ -187,7 +186,7 @@ class self.P3D
 
   _parse: (data) ->
     @_parsingDebugMsg(false)
-    parserOpts = pipeline: ["_parse#{@dataType}#{@fileType}", "split"], data: data
+    parserOpts = pipeline: ["_parse#{@dataType}#{@fileType}"], data: data
     if @opts.background == true
       console.log "Running as a background job"
       worker = new Worker webWorkerURL()

@@ -51,13 +51,7 @@ class window.Viewer
       model:
         display: true
         class: PhiloGL.O3D.P3DModel
-        dynamic: true
-        vertices: []
-        indices: []
-        normals: []
-        position: [0, 0, 0]
-        rotation: [0, 0, 0]
-        #scale: ( @mmToGLCoords*20 for i in [0..2] )
+        #p3d: { background: false }
         scale: ( @mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
         uniforms: @commonUniforms
@@ -68,28 +62,24 @@ class window.Viewer
         scale: (@mmToGLCoords for dimension in @buildVolume)
         uniforms: @commonUniforms
         render: @renderLines
+      cube: cube =
+        display: true
+        class: PhiloGL.O3D.Cube
+        texCoords: []
+        scale: (dimension/2 * @mmToGLCoords for dimension in @buildVolume)
+        colors: [0/255, 20/255, 240/255, 0.3]
+        uniforms: @commonUniforms
+        alignment: {x: @_center, y: @_center, z: @_bottom}
       platform:
         display: true
-        class: PhiloGL.O3D.Model
-        url: "/ultimaker_platform.stl"
-        scale: [0.1, 0.1, 0.1]
+        class: PhiloGL.O3D.P3DModel
+        src: "/ultimaker_platform.stl"
+        scale: scale = [0.1, 0.1, 0.1]
         colors: [0.2, 0.2, 0.2, 0.55]
         uniforms: @commonUniforms
         init: (o3d) =>
           verts = o3d.$vertices
           offset = [0, @webGlSettings().models.cube.scale[1] / o3d.scale.y, 0]
-          verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
-      cube:
-        display: true
-        class: PhiloGL.O3D.Cube
-        position: [0, 0, 0]
-        texCoords: []
-        scale: (dimension/2 * @mmToGLCoords for dimension in @buildVolume)
-        colors: [0/255, 20/255, 240/255, 0.3]
-        uniforms: @commonUniforms
-        init: (o3d) ->
-          verts = o3d.$vertices
-          offset = [0, 0, +1]
           verts[i+j] += offset[j] for j in [0..2] for i in [0..verts.length-1] by 3
     events:
       onDragStart: @setDragOffset
@@ -148,29 +138,23 @@ class window.Viewer
 
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
-    #return if name == "model"
-    if opts.url?
-      @loadToScene name, opts
-    else
-      o3d = new (opts.class || PhiloGL.O3D.Model) opts
-      @[name] = o3d if name?
-      o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
-      #console.log "#{name} start"
-      #console.log o3d
-      #console.log "#{name} end"
-      opts.init(o3d) if opts.init?
-      #o3d.drawType = @gl.LINES
-      o3d.update()
-      @scene.add o3d
-      @update()
-      @requestRender()
-      return o3d
+    defaults = { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
+    isP3D = opts.class == PhiloGL.O3D.P3DModel
 
-  # Adds a o3d to the scene by ajax loading it, parsing it and then generating it based on the opts
-  loadToScene: (name, opts) -> new P3D opts.url, (p3d) =>
-    opts[k] = p3d.chunks[0][k] for k in["vertices", "normals", "indices"]
-    delete opts.url
-    @addToScene name, opts
+    o3d = new (opts.class ?= PhiloGL.O3D.Model) opts, @_onO3DLoad.fill(opts)
+    @[name] = o3d if name?
+    o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of defaults
+    @_onO3DLoad(opts, undefined, o3d) unless isP3D
+    return o3d
+
+  _onO3DLoad: (opts, p3d, o3d) =>
+    @_alignModel o3d, opts.alignment if opts.alignment?
+    opts.init(o3d) if opts.init?
+    #o3d.drawType = @gl.LINES
+    o3d.update()
+    @scene.add o3d
+    @update()
+    @requestRender()
 
   setGCode: (gcode) ->
     # GCode parsing
@@ -180,20 +164,22 @@ class window.Viewer
 
   loadModel: (url, onLoadCallback) -> @model.load url, (p3d) =>
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
+    console.log p3d
     $(".local-download-link").attr
-      href: (window.webkitURL||window.URL).createObjectURL p3d.exportTextStl()
+      href: (window.webkitURL||window.URL).createObjectURL p3d.blob
       download: name
+    $(".local-download-link").html "Download #{p3d.fileType}"
 
     # centering and z-aligning the object on top of the build platform
-    @_alignModel @model, x: @_center, y: @_center, z: @_bottom
-
-    @update()
-    @requestRender()
+    @_onO3DLoad alignment: {x: @_center, y: @_center, z: @_bottom}, p3d, @model
     onLoadCallback?()
 
   _center: [0.5, 0.5]
   _bottom: [0, 1]
-  _alignModel: (model, opts = {x: @_center, y: @_center, z: @_center}) ->
+  _none: [0, 0]
+
+  _alignModel: (model, opts = {x: @_none, y: @_none, z: @_none}) ->
+    console.log model
     verts = model.vertices
 
     offset = null
