@@ -32,7 +32,7 @@ $ ->
   if true
     $("#manual_ctrl .canvas-container").viewer (viewer) ->
       #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
-      viewer.loadModel("/ultimaker_platform.stl")
+      #viewer.loadModel("/ultimaker_platform.stl")
       #viewer.loadModel("/40mmcube.stl")
       #viewer.loadModel("/DNA_Righthanded.stl")
       #viewer.loadModel("/CurveEdgeTest.amf")

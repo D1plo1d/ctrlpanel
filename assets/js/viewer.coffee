@@ -24,9 +24,11 @@ class window.Viewer
     @position = new PhiloGL.Vec3(0, -10, -70)
     #@position = new PhiloGL.Vec3(0, 0, -70)
 
-  commonUniforms:
-    shininess: 10
-    hasTexture1: false
+  o3dDefaults:
+    class: PhiloGL.O3D.P3DModel
+    uniforms:
+      shininess: 10
+      hasTexture1: false
 
   webGlSettings: => @_webGlSettings ||=
     #context: {debug: true}
@@ -50,33 +52,26 @@ class window.Viewer
     models:
       model:
         display: true
-        class: PhiloGL.O3D.P3DModel
         #p3d: { background: false }
         scale: ( @mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
-        uniforms: @commonUniforms
       gcodeLines:
         display: false
         class: PhiloGL.O3D.PolyLine
         colors: [1, 0, 1, 1]
         scale: (@mmToGLCoords for dimension in @buildVolume)
-        uniforms: @commonUniforms
         render: @renderLines
       cube: cube =
         display: true
         class: PhiloGL.O3D.Cube
-        texCoords: []
         scale: (dimension/2 * @mmToGLCoords for dimension in @buildVolume)
         colors: [0/255, 20/255, 240/255, 0.3]
-        uniforms: @commonUniforms
         alignment: {x: @_center, y: @_center, z: @_bottom}
       platform:
         display: true
-        class: PhiloGL.O3D.P3DModel
         src: "/ultimaker_platform.stl"
         scale: scale = [0.1, 0.1, 0.1]
         colors: [0.2, 0.2, 0.2, 0.55]
-        uniforms: @commonUniforms
         init: (o3d) =>
           verts = o3d.$vertices
           offset = [0, @webGlSettings().models.cube.scale[1] / o3d.scale.y, 0]
@@ -138,12 +133,14 @@ class window.Viewer
 
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
-    defaults = { position: [0,0,0], rotation: [0,0,0], scale: [1,1,1] }
+    opts = $.extend {}, @o3dDefaults, opts
+    console.log opts
+
+    orientation = position: [0,0,0], rotation: [0,0,0], scale: [1,1,1]
     isP3D = opts.class == PhiloGL.O3D.P3DModel
 
-    o3d = new (opts.class ?= PhiloGL.O3D.Model) opts, @_onO3DLoad.fill(opts)
-    @[name] = o3d if name?
-    o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of defaults
+    @[name] = o3d = new (opts.class)(opts, @_onO3DLoad.fill opts)
+    o3d[k].set.apply(o3d[k], opts[k] || v) for k, v of orientation
     @_onO3DLoad(opts, undefined, o3d) unless isP3D
     return o3d
 

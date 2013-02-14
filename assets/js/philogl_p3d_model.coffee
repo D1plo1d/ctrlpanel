@@ -2,7 +2,6 @@ class PhiloGL.O3D.P3DModel extends PhiloGL.O3D.Model
 
   constructor: (@opts = {}, callback ) ->
     @opts.render = @render
-    console.log @opts
     PhiloGL.O3D.Model.call @, @opts;
     @load @opts.src, callback if @opts.src?
 
