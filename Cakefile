@@ -26,7 +26,7 @@ logStart = (message) ->
   process.stdout.write "#{message}.."
 
 logEnd = (message = currentMessage) ->
-  console.log "\r#{message}..".padRight(' ', 60 - message.length) + '[\x1B[0;32m DONE \x1B[0m]'
+  console.log "\r#{message}..".padRight(' ', 80 - message.length) + '[\x1B[0;32m DONE \x1B[0m]'
 
 config = null
 loadConfig = (callback) ->
@@ -77,15 +77,18 @@ _buildAssetsAfterCleaning = (options = {}, callback) ->
   process.env.NODE_ENV = oldEnv
   callback?()
 
-
 deploy = (callback) ->
-  console.log "who?"
   loadConfig -> gitPull -> rsyncAssets callback
+
+deploymentInfo = ->
+  {hostname, user} = config.deployment
+  info =
+    host: "#{ if user? then "#{user}@" else '' }#{hostname}"
+    dir: '~/ctrlpanel/'
 
 gitPull = (callback) ->
   logStart "Synchronizing Git Repository"
-  host = config.deployment.hostname
-  dir = '~/ctrlpanel/'
+  {host, dir} = deploymentInfo()
   exec "git remote rm localDeployment", ->
     exec "git remote add localDeployment ssh://#{host}/~/ctrlpanel/.git", ->
       proc = exec "git push localDeployment"
@@ -97,9 +100,8 @@ gitPull = (callback) ->
 
 rsyncAssets = (callback) ->
   logStart "Synchronizing Assets"
-  host = config.deployment.hostname
-  dir = '~/ctrlpanel/builtAssets'
-  proc = exec "rsync -r ./builtAssets #{host}:#{dir}"
+  {host, dir} = deploymentInfo()
+  proc = exec "rsync -r ./builtAssets host:#{dir}/builtAssets"
   proc.on 'exit', (status) -> callback?() if status == 0
   proc.stderr.on 'data', console.log
   proc.stdout.on 'data', console.log
@@ -169,5 +171,3 @@ task 'dev', 'start dev env', ->
     process.on e, -> supervisor.kill()
   
   log 'Watching js files and running server', green
-
-  
