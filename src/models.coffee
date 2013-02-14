@@ -3,9 +3,8 @@ fs   = require 'fs'
 temp = require 'temp'
 yml = require 'js-yaml'
 path = require 'path'
-exec = require('child_process').exec
-spawn = require('child_process').spawn
-events = require('events')
+{spawn, exec}  = require 'child_process'
+events = require 'events'
 
 config = null
 rootDir = "#{__dirname}/.."
