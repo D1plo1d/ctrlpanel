@@ -24,7 +24,11 @@ class PrintDriver
     console.log "\nStarting Driver Child Process"
     console.log "--------------------------------------"
     #@proc = spawn config.driver, undefined, cwd: rootDir
-    @proc = spawn "python", ["#{rootDir}/drivers/printrun/pronsole.py", "--web"], cwd: rootDir
+    try
+      which.sync python = "python2"
+    catch
+      which.sync python = "python"
+    @proc = spawn python, ["#{rootDir}/drivers/printrun/pronsole.py", "--web"], cwd: rootDir
     @proc.stderr.on 'data', @_log
     @proc.stdout.on 'data', @_log
     for e in ["uncaughtException", "SIGINT", "SIGTERM"]

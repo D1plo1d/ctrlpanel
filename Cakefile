@@ -78,34 +78,44 @@ _buildAssetsAfterCleaning = (options = {}, callback) ->
   callback?()
 
 deploy = (callback) ->
-  loadConfig -> gitPull -> rsyncAssets callback
+  loadConfig -> gitPush -> rsyncAssets callback
 
 deploymentInfo = ->
-  {hostname, user} = config.deployment
+  {hostname, username} = config.deployment
   info =
-    host: "#{ if user? then "#{user}@" else '' }#{hostname}"
-    dir: '~/ctrlpanel/'
+    host: "#{ if username? then "#{username}@" else '' }#{hostname}"
+    dir: '~/ctrlpanel'
 
-gitPull = (callback) ->
+gitPush = (callback) ->
   logStart "Synchronizing Git Repository"
   {host, dir} = deploymentInfo()
-  exec "git remote rm localDeployment", ->
-    exec "git remote add localDeployment ssh://#{host}/~/ctrlpanel/.git", ->
-      proc = exec "git push localDeployment"
-      proc.on 'exit', (status) -> if status == 0
-        logEnd()
-        callback?()
+  commands = [
+    "ssh #{host} 'cd #{dir};git checkout -B null'"
+    "git push ssh://#{host}/#{dir} master"
+    "ssh #{host} 'cd #{dir};git checkout master'"
+  ].reverse()
+  execNextCmd = () ->
+    if commands.length > 0
+      console.log "\n- " + cmd = commands.pop()
+      proc = exec cmd, execNextCmd
       proc.stderr.on 'data', console.log
       proc.stdout.on 'data', console.log
+    else
+      logEnd()
+      callback?()
+  execNextCmd()
 
 rsyncAssets = (callback) ->
   logStart "Synchronizing Assets"
   {host, dir} = deploymentInfo()
-  proc = exec "rsync -r ./builtAssets host:#{dir}/builtAssets"
-  proc.on 'exit', (status) -> callback?() if status == 0
+  cmd = "scp -r ./builtAssets #{host}:#{dir}/builtAssets"
+  console.log "\n#{cmd}"
+  proc = exec cmd
+  proc.on 'exit', (status) -> if status == 0
+    logEnd()
+    callback?()
   proc.stderr.on 'data', console.log
   proc.stdout.on 'data', console.log
-  logEnd()
 
 # mocha test
 test = (callback) ->
