@@ -1,6 +1,6 @@
 #new-print-job-modal
-  display -webkit-flex
-  -webkit-flex-flow column
+  display flex
+  flex-flow column
 
   &.hide
     left: -10000000px
@@ -10,16 +10,16 @@
 
   .modal-body
     // external col flex
-    -webkit-flex 1 1 auto
+    flex 1 1 auto
     max-height initial
     height auto
     // internal row flex
-    display -webkit-flex
-    -webkit-flex-flow row
-    -webkit-box-direction: reverse
+    display flex
+    flex-flow row
+    box-direction: reverse
 
   .canvas-container
-    -webkit-flex 1 1 auto
+    flex 1 1 auto
 
   .options
     z-index: 10

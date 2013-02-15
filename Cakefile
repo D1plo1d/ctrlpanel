@@ -108,7 +108,7 @@ gitPush = (callback) ->
 rsyncAssets = (callback) ->
   logStart "Synchronizing Assets"
   {host, dir} = deploymentInfo()
-  cmd = "scp -r ./builtAssets #{host}:#{dir}/builtAssets"
+  cmd = "scp -r ./builtAssets #{host}:#{dir}"
   console.log "\n#{cmd}"
   proc = exec cmd
   proc.on 'exit', (status) -> if status == 0

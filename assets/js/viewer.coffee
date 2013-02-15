@@ -134,7 +134,6 @@ class window.Viewer
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
     opts = $.extend {}, @o3dDefaults, opts
-    console.log opts
 
     orientation = position: [0,0,0], rotation: [0,0,0], scale: [1,1,1]
     isP3D = opts.class == PhiloGL.O3D.P3DModel
@@ -161,7 +160,7 @@ class window.Viewer
 
   loadModel: (url, onLoadCallback) -> @model.load url, (p3d) =>
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
-    console.log p3d
+    #console.log p3d
     $(".local-download-link").attr
       href: (window.webkitURL||window.URL).createObjectURL p3d.blob
       download: name
@@ -176,7 +175,7 @@ class window.Viewer
   _none: [0, 0]
 
   _alignModel: (model, opts = {x: @_none, y: @_none, z: @_none}) ->
-    console.log model
+    #console.log model
     verts = model.vertices
 
     offset = null

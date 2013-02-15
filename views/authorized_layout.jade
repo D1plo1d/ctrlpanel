@@ -1,43 +1,46 @@
 extends layout
 block sublayout
-  #main-container.container
+  #main-container
 
     // Header
-    header.row
-      .span12
-        // Navigation
-        .pull-right
-          ul.nav.nav-pills
-            each tab, i in ['print_queue', 'manual_ctrl', 'settings']
-              li(class='#{i == 0? 'active' : ''}')
-                a(href= '##{tab}', data-toggle="pill")= tab.titleize()
-        // Title
-        h1 Ctrl Panel 
-          span.name Ultimaker 2
+    header.container
+      .row
+        .span12
+          // Navigation
+          .pull-right
+            ul.nav.nav-pills
+              each tab, i in ['print_queue', 'manual_ctrl', 'settings']
+                li(class='#{i == 0? 'active' : ''}')
+                  a(href= '##{tab}', data-toggle="pill")= tab.titleize()
+          // Title
+          h1 Ctrl Panel 
+            span.name Ultimaker 2
 
     // Body
-    .row.content
-      .span12
-        block content
+    .content.container
+      .row
+        .span12
+          block content
 
     // Footer
-    footer.row
-      .span12
+    footer.container
+      .row
+        .span12
 
-        .pull-right
-          .btn.btn-danger E STOP
-          a.btn-new-print-job.btn(href="#")
-            i.icon-plus
-            | Print Job
+          .pull-right
+            .btn.btn-danger E STOP
+            a.btn-new-print-job.btn(href="#")
+              i.icon-plus
+              | Print Job
 
-        .temperature
-          .name PLA Extruder:
-          .value 172&deg;C
-        .temperature
-          .name ABS Extruder:
-          .value 168&deg;C
-        .temperature
-          .name Build Platform:
-          .value 98&deg;C
+          .temperature
+            .name PLA Extruder:
+            .value 172&deg;C
+          .temperature
+            .name ABS Extruder:
+            .value 168&deg;C
+          .temperature
+            .name Build Platform:
+            .value 98&deg;C
 
           

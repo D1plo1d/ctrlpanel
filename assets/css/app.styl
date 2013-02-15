@@ -9,22 +9,35 @@
 
 // Font Awesome Bootstrap Compatibility Hacks
 [class^="icon-"], [class*=" icon-"]
-  background-image: none
-  padding-right: 0.1em
-  line-height: inherit
+  background-image none
+  padding-right 0.1em
+  line-height inherit
 
 .btn [class^="icon-"], [class*=" icon-"]
-    line-height: 1em
+  line-height 1em
 
 
 // Layout
 
-html, body, .container
-  height 100%
+html, body
+  height 100% // Not sure why but 100% was borking FF
+  margin 0px
+  padding 0px
+
+@css {
+  @-moz-document url-prefix() { 
+    body {
+      margin-top: -20px;
+    }
+  }
+}
 
 #main-container
-  display -webkit-flex
-  -webkit-flex-flow column
+  display flex
+  flex-flow column
+  box-align center
+  width 100%
+  height 100%
 
 header
   .nav
@@ -35,7 +48,7 @@ header
     color #CCC
 
 .content
-  -webkit-flex 1 1 auto
+  flex 1 1 auto
 
 footer
   .span12
