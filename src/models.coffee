@@ -5,6 +5,7 @@ yml = require 'js-yaml'
 path = require 'path'
 {spawn, exec}  = require 'child_process'
 events = require 'events'
+which = require 'which'
 
 config = null
 rootDir = "#{__dirname}/.."
