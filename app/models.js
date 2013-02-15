@@ -42,11 +42,16 @@ PrintDriver = (function() {
   }
 
   PrintDriver.prototype._initChildProc = function() {
-    var e, _i, _len, _ref1, _results;
+    var e, python, _i, _len, _ref1, _results;
     if (config.driver.spawn) {
       console.log("\nStarting Driver Child Process");
       console.log("--------------------------------------");
-      this.proc = spawn("python", ["" + rootDir + "/drivers/printrun/pronsole.py", "--web"], {
+      try {
+        which.sync(python = "python2");
+      } catch (error) {
+        which.sync(python = "python");
+      }
+      this.proc = spawn(python, ["" + rootDir + "/drivers/printrun/pronsole.py", "--web"], {
         cwd: rootDir
       });
       this.proc.stderr.on('data', this._log);

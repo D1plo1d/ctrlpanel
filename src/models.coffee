@@ -25,9 +25,9 @@ class PrintDriver
     console.log "--------------------------------------"
     #@proc = spawn config.driver, undefined, cwd: rootDir
     try
-      which.sync python = "python2"
-    catch
-      which.sync python = "python"
+      which.sync(python = "python2")
+    catch error
+      which.sync(python = "python")
     @proc = spawn python, ["#{rootDir}/drivers/printrun/pronsole.py", "--web"], cwd: rootDir
     @proc.stderr.on 'data', @_log
     @proc.stdout.on 'data', @_log
