@@ -219,9 +219,11 @@ class window.Viewer
       height: @opts.height?() || @$glCanvas.parent().innerHeight()
     @$glCanvas.attr @size
     #@$glCanvas.attr height: @size.height
+    console.log @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()
+    #@$glCanvas.removeAttr k for k in ['width', 'height']
     @requestRender()
 
   requestRender: -> @dirty = true
