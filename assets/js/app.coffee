@@ -34,20 +34,8 @@ $ ->
       height: ->
         $(".content").innerHeight() - parseInt($viewer.css('margin-bottom'), 10) - 5
       onLoad: (viewer) ->
-      #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
-      #viewer.loadModel("/ultimaker_platform.stl")
-      #viewer.loadModel("/40mmcube.stl")
-      #viewer.loadModel("/DNA_Righthanded.stl")
-      #viewer.loadModel("/CurveEdgeTest.amf")
-      #viewer.loadModel("/Rook_unzipped.amf")
-      #viewer.loadModel("/Sphere20Face.amf")
-      #viewer.loadModel("/cow-nonormals.obj")
-      #viewer.loadModel("/polysoup-fixed.stl")
-      #viewer.loadModel("/low-poly-ball.stl")
-      #viewer.loadModel("/10242-vert-ball.stl")
-      #viewer.loadModel("/40962-vert-ball.stl")
-      #viewer.loadModel("/high-poly-ball.stl")
-      #viewer.loadModel("/chair.stl")
+        #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
+        #viewer.loadModel("/ultimaker_platform.stl")
 
   #else
   if true
