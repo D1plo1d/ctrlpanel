@@ -86,9 +86,8 @@ class window.Viewer
 
   # Viewer Methods
 
-  constructor: ($container, callback) ->
+  constructor: ($container, @opts) ->
     @initDefaults()
-    @_onLoadCallback = callback
     @$glCanvas = $ $("<canvas id='webGlCanvas#{viewerCount++}'></canvas>")
     $container.prepend @$glCanvas
     @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
@@ -101,11 +100,10 @@ class window.Viewer
     @[k] = app[k] for k in ['gl', 'program', 'camera', 'canvas', 'scene']
 
     window.gl = @gl
-    #console.log app
 
     # WebGL settings
-    #@gl.clearColor(0, 0, 0, 1)
-    @gl.clearColor(1, 1, 1, 1)
+    @gl.clearColor(0, 0, 0, 1)
+    #@gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
@@ -129,7 +127,7 @@ class window.Viewer
     @update()
     @resize()
     @render()
-    @_onLoadCallback(@)
+    @opts.onLoad(@)
 
   # Adds a o3d to the scene by generating it based on the opts
   addToScene: (name, opts) ->
@@ -210,10 +208,12 @@ class window.Viewer
     @update()
     @requestRender()
 
-  resize: ->
-    #console.log "Resize!"
-    @size = width: @$glCanvas.parent().innerWidth(), height: @$glCanvas.parent().innerHeight()
+  resize: () ->
+    @size =
+      width: @opts.width?() || @$glCanvas.parent().innerWidth()
+      height: @opts.height?() || @$glCanvas.parent().innerHeight()
     @$glCanvas.attr @size
+    #@$glCanvas.attr height: @size.height
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()

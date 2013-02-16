@@ -1,18 +1,19 @@
 // TODO: this will need to be positioned offscreen rather then hidden for everything to work
 //#new-print-job-modal.modal.fade
 #new-print-job-modal.modal.fade.hide
-  .modal-body
-    .canvas-container
-    .options
-      h3 Print Options
-      form.form.form-horizontal(method="post", action="/print_jobs/", enctype="multipart/form-data")
-        .control-group
-          .control-label Scale
-          .controls
-            input(type="number", value=1.0, step=0.1)
-          input.cad-files.hide(type="file", name="cadFiles")
-      a.local-download-link.pull-right(href="#") Download STL
+  .flex-container
+    .modal-body
+      .canvas-container
+      .options
+        h3 Print Options
+        form.form.form-horizontal(method="post", action="/print_jobs/", enctype="multipart/form-data")
+          .control-group
+            .control-label Scale
+            .controls
+              input(type="number", value=1.0, step=0.1)
+            input.cad-files.hide(type="file", name="cadFiles")
+        a.local-download-link.pull-right(href="#") Download STL
 
-  .modal-footer
-    a.btn(href="#", data-dismiss="modal", aria-hidden=true) Cancel
-    a.btn-confirm-print-job.btn.btn-primary(href="#", data-dismiss="modal", aria-hidden=true) 3D Print
+    .modal-footer
+      a.btn(href="#", data-dismiss="modal", aria-hidden=true) Cancel
+      a.btn-confirm-print-job.btn.btn-primary(href="#", data-dismiss="modal", aria-hidden=true) 3D Print

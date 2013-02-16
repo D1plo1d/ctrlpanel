@@ -1,6 +1,11 @@
 #new-print-job-modal
-  display flex
-  flex-flow column
+  .flex-container
+    display flex
+    flex-flow column
+    box-pack center
+    
+    width 100%
+    height 100%
 
   &.hide
     left: -10000000px
@@ -10,13 +15,16 @@
 
   .modal-body
     // external col flex
+    position static
     flex 1 1 auto
-    max-height initial
+    max-height none
     height auto
     // internal row flex
     display flex
     flex-flow row
     box-direction: reverse
+    box-sizing: border-box
+    width: 100%
 
   .canvas-container
     flex 1 1 auto

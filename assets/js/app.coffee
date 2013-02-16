@@ -30,7 +30,10 @@ $ ->
 
 
   if true
-    $("#manual_ctrl .canvas-container").viewer (viewer) ->
+    $viewer = $("#manual_ctrl .canvas-container").viewer
+      height: ->
+        $(".content").innerHeight() - parseInt($viewer.css('margin-bottom'), 10) - 5
+      onLoad: (viewer) ->
       #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
       #viewer.loadModel("/ultimaker_platform.stl")
       #viewer.loadModel("/40mmcube.stl")
@@ -49,7 +52,7 @@ $ ->
   #else
   if true
     # New print job modal
-    $(".modal .canvas-container").viewer ->
+    $canvas = $(".modal .canvas-container").viewer onLoad: ->
 
     # Show the file dialog when the new print job button is clicked
     $(".btn-new-print-job").on "click", ->
@@ -61,6 +64,7 @@ $ ->
         console.log "moo"
         $("body").unmask()
         $("#new-print-job-modal").removeClass("hide").modal("show")
+        $canvas.viewer "resize"
     # Start the print when the print button is clicked
     $("#new-print-job-modal .btn-confirm-print-job").on "click", (e) ->
       formData = new FormData $("#new-print-job-modal form")[0]
