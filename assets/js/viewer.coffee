@@ -127,6 +127,7 @@ class window.Viewer
     # Init
     @update()
     @resize()
+    $(window).resize @resize
     @render()
     @opts.onLoad(@)
 
@@ -213,7 +214,7 @@ class window.Viewer
     @update()
     @requestRender()
 
-  resize: () ->
+  resize: () =>
     @size =
       width: @opts.width?() || @$glCanvas.parent().innerWidth()
       height: @opts.height?() || @$glCanvas.parent().innerHeight()
