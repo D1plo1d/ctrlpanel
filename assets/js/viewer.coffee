@@ -103,8 +103,8 @@ class window.Viewer
     window.gl = @gl
 
     # WebGL settings
-    @gl.clearColor(0, 0, 0, 1)
-    #@gl.clearColor(1, 1, 1, 1)
+    #@gl.clearColor(0, 0, 0, 1)
+    @gl.clearColor(1, 1, 1, 1)
     @gl.clearDepth(1)
     @gl.enable(@gl.CULL_FACE)
     @gl.enable(@gl.DEPTH_TEST)
