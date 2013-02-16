@@ -145,13 +145,13 @@ class window.Viewer
 
   _onO3DLoad: (opts, p3d, o3d) =>
     #console.log p3d
-    console.log p3d?.vertices.length
-    console.log p3d?.nOfTriangles
     window.a = p3d.blob if p3d?
     @_alignModel o3d, opts.alignment if opts.alignment?
     opts.init(o3d) if opts.init?
     #o3d.drawType = @gl.LINES
     o3d.update()
+    if o3d == @model
+      @position.y = -(@model.dimensions?[2] * @model.scale[2]||0)/2
     @scene.add o3d
     @update()
     @requestRender()
@@ -189,6 +189,8 @@ class window.Viewer
       for j in [0..2]
         min[j] = verts[i+j] if verts[i+j] < min[j]
         max[j] = verts[i+j] if verts[i+j] > max[j]
+    model.dimensions = ( max[i] - min[i] for i in [0..2] )
+    console.log model.dimensions
     offset = ( max[i]*opts[k][0] + min[i]*opts[k][1] for k, i in ['x','y','z'] )
     for i in [0..verts.length-1] by 3
       for j in [0..2]
@@ -209,7 +211,9 @@ class window.Viewer
     @requestRender()
 
   onMouseWheel: (e) =>
-    @position.z = Math.max -500, Math.min -1, @position.z - e.wheel*10
+    maxDistance = 100
+    console.log (@position.z/maxDistance)
+    @position.z = Math.max -maxDistance, Math.min 0.001, @position.z - 20*e.wheel*(@position.z/maxDistance)
     
     @update()
     @requestRender()
@@ -219,8 +223,6 @@ class window.Viewer
       width: @opts.width?() || @$glCanvas.parent().innerWidth()
       height: @opts.height?() || @$glCanvas.parent().innerHeight()
     @$glCanvas.attr @size
-    #@$glCanvas.attr height: @size.height
-    console.log @size
     @gl.viewport(0, 0, @size.width, @size.height)
     @camera.aspect = @size.width / @size.height
     @camera.update()
@@ -239,7 +241,7 @@ class window.Viewer
 
   render: =>
     if @dirty == true
-      console.log "Draw!"
+      #console.log "Draw!"
       # Clear Screen
       @gl.clear(@gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT)
       # Draw everything
