@@ -102,6 +102,8 @@ if !isWorker
 else
   parserPipeline = null
   data = null
+  # Transferable Objects from the worker to the main thread are broken in firefox 18
+  attemptTransfer = navigator.userAgent.toLowerCase().indexOf('firefox/18') == -1
   # Running a slave P3D instance in the webworker
   @onmessage = (event) ->
     parser = new P3D.Parser(event.data)
@@ -111,7 +113,7 @@ else
     transfers = ( parser[k].buffer for k in ['normals', 'vertices', 'indices'] )
     if parser.chunks?
       transfers.push chunk[k].buffer for k in ['normals', 'vertices', 'indices'] for chunk in parser.chunks
-    postMessage msg, transfers
+    postMessage msg, if attemptTransfer then transfers else undefined
 
 
 # P3D

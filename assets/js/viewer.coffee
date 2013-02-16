@@ -69,6 +69,7 @@ class window.Viewer
         alignment: {x: @_center, y: @_center, z: @_bottom}
       platform:
         display: true
+        #p3d: { background: false }
         src: "/ultimaker_platform.stl"
         scale: scale = [0.1, 0.1, 0.1]
         colors: [0.2, 0.2, 0.2, 0.55]
@@ -142,6 +143,10 @@ class window.Viewer
     return o3d
 
   _onO3DLoad: (opts, p3d, o3d) =>
+    #console.log p3d
+    console.log p3d?.vertices.length
+    console.log p3d?.nOfTriangles
+    window.a = p3d.blob if p3d?
     @_alignModel o3d, opts.alignment if opts.alignment?
     opts.init(o3d) if opts.init?
     #o3d.drawType = @gl.LINES
