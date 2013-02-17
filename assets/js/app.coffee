@@ -41,31 +41,41 @@ $ ->
   #else
   if true
     # New print job modal
-    $canvas = $(".modal .canvas-container").viewer onLoad: ->
+    $modal = $("#new-print-job-modal")
+    window.$jobPreview = $canvas = $modal.find(".canvas-container").viewer onLoad: ->
 
-    # Show the file dialog when the new print job button is clicked
-    $(".btn-new-print-job").on "click", ->
-      $("#new-print-job-modal .cad-files").click()
-    # Show the print dialog when a file is selected (TODO: allow multiple file uploads, add pagination to the modal)
-    $("#new-print-job-modal .cad-files").on "change", -> if @files.length > 0
-      $("body").mask("Loading...")
-      $("#new-print-job-modal .canvas-container").viewer "loadModel", @files[0], ->
-        console.log "moo"
-        $("body").unmask()
-        $("#new-print-job-modal").removeClass("hide").modal("show")
-        $canvas.viewer "resize"
-    # Start the print when the print button is clicked
-    $("#new-print-job-modal .btn-confirm-print-job").on "click", (e) ->
-      formData = new FormData $("#new-print-job-modal form")[0]
-      console.log formData
-      #$.post "/print_jobs/", formData
-      $.ajax
-        url: "/print_jobs/"
-        type: 'POST'
-        data: formData
-        cache: false
-        processData : false
-        contentType : false
-      console.log e
-      e.preventDefault()
-      return false
+      # Show the file dialog when the new print job button is clicked
+      $(".btn-new-print-job").on "click", ->
+        $("#new-print-job-modal .cad-files").click()
+
+      openPrintJobModal = (files) ->
+        $("body").mask("Loading...")
+        $canvas.viewer "loadModel", files[0], ->
+          console.log "moo"
+          $("body").unmask()
+          $modal.removeClass("hide").modal("show")
+          $canvas.viewer "resize"
+
+      # Show the print dialog when a file is selected (TODO: allow multiple file uploads, add pagination to the modal)
+      $("#new-print-job-modal .cad-files").on "change", ->
+        openPrintJobModal(@files) if @files.length > 0
+
+      # Testing
+      openPrintJobModal ["/ultimaker_platform.stl"]
+      $canvas.viewer "scale", 0.5
+
+      # Start the print when the print button is clicked
+      $("#new-print-job-modal .btn-confirm-print-job").on "click", (e) ->
+        formData = new FormData $("#new-print-job-modal form")[0]
+        console.log formData
+        #$.post "/print_jobs/", formData
+        $.ajax
+          url: "/print_jobs/"
+          type: 'POST'
+          data: formData
+          cache: false
+          processData : false
+          contentType : false
+        console.log e
+        e.preventDefault()
+        return false

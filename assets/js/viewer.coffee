@@ -151,10 +151,13 @@ class window.Viewer
     #o3d.drawType = @gl.LINES
     o3d.update()
     if o3d == @model
-      @position.y = -(@model.dimensions?[2] * @model.scale[2]||0)/2
+      @_updateVerticalCentering()
     @scene.add o3d
     @update()
     @requestRender()
+
+  _updateVerticalCentering: ->
+    @position.y = -(@model.dimensions?[2] * @model.scale[2]||0)/2
 
   setGCode: (gcode) ->
     # GCode parsing
@@ -162,7 +165,7 @@ class window.Viewer
     @gcodeLines.updateLines()
     @requestRender()
 
-  loadModel: (url, onLoadCallback) -> @model.load url, (p3d) =>
+  loadModel: (url, onLoadCallback) => @model.load url, (p3d) =>
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
     #console.log p3d
     $(".local-download-link").attr
@@ -173,6 +176,15 @@ class window.Viewer
     # centering and z-aligning the object on top of the build platform
     @_onO3DLoad alignment: {x: @_center, y: @_center, z: @_bottom}, p3d, @model
     onLoadCallback?()
+
+  scale: (val) =>
+    val = val * @mmToGLCoords
+    @model.scale.set val, val, val
+    console.log @model.scale
+    @_alignModel @model, @webGlSettings().models.model.alignment
+    @_updateVerticalCentering()
+    @update()
+    @requestRender()
 
   _center: [0.5, 0.5]
   _bottom: [0, 1]
@@ -212,7 +224,6 @@ class window.Viewer
 
   onMouseWheel: (e) =>
     maxDistance = 100
-    console.log (@position.z/maxDistance)
     @position.z = Math.max -maxDistance, Math.min 0.001, @position.z - 20*e.wheel*(@position.z/maxDistance)
     
     @update()
