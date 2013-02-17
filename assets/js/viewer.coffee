@@ -21,7 +21,7 @@ class window.Viewer
     @mmToGLCoords = 0.1
 
     @rotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-    @position = new PhiloGL.Vec3(0, -10, -70)
+    @position = new PhiloGL.Vec3(0, -10, -40)
     #@position = new PhiloGL.Vec3(0, 0, -70)
 
   o3dDefaults:
