@@ -36,6 +36,7 @@ $ ->
       onLoad: (viewer) ->
         #$.get "/40mmcube.gcode", (gcode) -> viewer.setGCode(gcode)
         #viewer.loadModel("/ultimaker_platform.stl")
+    $('a.manual_ctrl_nav').on 'shown', -> $viewer.viewer "resize"
 
   #else
   if true

@@ -11,7 +11,7 @@ block sublayout
             ul.nav.nav-pills
               each tab, i in ['print_queue', 'manual_ctrl', 'settings']
                 li(class='#{i == 0? 'active' : ''}')
-                  a(href= '##{tab}', data-toggle="pill")= tab.titleize()
+                  a(href= '##{tab}', data-toggle="pill", class="#{tab}_nav")= tab.titleize()
           // Title
           h1 Ctrl Panel 
             span.name Ultimaker 2
