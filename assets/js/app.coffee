@@ -74,14 +74,11 @@ $ ->
         val: 1
         snap: (val) -> val.round(1)
         onChange: (e, val) ->
-          #val = 1/16 * Math.pow(2,val*10)
           $scaleVal.val(val).change()
 
       $scaleVal.on "keyup change", ->
         val = parseFloat $scaleVal.val()
         return unless Object.isNumber(val) and val > 0
-        #sliderVal = 16 * Math.log(val) / 10
-        #console.log sliderVal
         if val != $scaleSlider.slider "val"
           $scaleSlider.slider "val", val
         $canvas.viewer "scale", val

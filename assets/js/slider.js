@@ -14,8 +14,6 @@
     var data = $el.data("slider")
     if (!( data === undefined))
     {
-      console.log("w00t");
-      console.log(data);
       return data[arguments[0]].call(this, arguments[1])
     }
 
