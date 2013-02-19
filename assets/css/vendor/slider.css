@@ -1,0 +1,27 @@
+.slider.progress .bar {
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  transition: none;
+}
+
+/*.slider {
+  border-radius: 4px;
+}
+
+.slider .slider-bar {
+  height: 100%;
+  background: #39C;
+}
+
+.slider .slider-handle {
+  width: 10px;
+  height: 20px;
+  outline: 1px solid #CCC;
+}
+
+.slider .slider-handle {
+  width: 10px;
+  height: 20px;
+  outline: 1px solid #CCC;
+}*/

@@ -98,7 +98,7 @@ if !isWorker
     str = str.replace(/^\s*function\s*\(\) {/, "").replace(/}\s*$/, '')
 
     webWorkerBlob = new Blob [str], type: "text/javascript"
-    @webWorkerURL = (window.URL || window.webkiURL).createObjectURL webWorkerBlob
+    @webWorkerURL = (window.URL || window.webkitURL).createObjectURL webWorkerBlob
 else
   parserPipeline = null
   data = null

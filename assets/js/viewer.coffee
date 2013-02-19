@@ -146,7 +146,7 @@ class window.Viewer
   _onO3DLoad: (opts, p3d, o3d) =>
     #console.log p3d
     window.a = p3d.blob if p3d?
-    @_alignModel o3d, opts.alignment if opts.alignment?
+    @_alignO3D o3d, opts.alignment if opts.alignment?
     opts.init(o3d) if opts.init?
     #o3d.drawType = @gl.LINES
     o3d.update()
@@ -180,8 +180,8 @@ class window.Viewer
   scale: (val) =>
     val = val * @mmToGLCoords
     @model.scale.set val, val, val
-    console.log @model.scale
-    @_alignModel @model, @webGlSettings().models.model.alignment
+    #console.log @model.scale
+    @_alignO3D @model, @webGlSettings().models.model.alignment
     @_updateVerticalCentering()
     @update()
     @requestRender()
@@ -190,9 +190,8 @@ class window.Viewer
   _bottom: [0, 1]
   _none: [0, 0]
 
-  _alignModel: (model, opts = {x: @_none, y: @_none, z: @_none}) ->
-    #console.log model
-    verts = model.vertices
+  _alignO3D: (model, opts = {x: @_none, y: @_none, z: @_none}) ->
+    verts = model.vertices || []
 
     offset = null
     min = ( Number.MAX_VALUE for i in [0..2])
@@ -202,12 +201,11 @@ class window.Viewer
         min[j] = verts[i+j] if verts[i+j] < min[j]
         max[j] = verts[i+j] if verts[i+j] > max[j]
     model.dimensions = ( max[i] - min[i] for i in [0..2] )
-    console.log model.dimensions
+
     offset = ( max[i]*opts[k][0] + min[i]*opts[k][1] for k, i in ['x','y','z'] )
     for i in [0..verts.length-1] by 3
       for j in [0..2]
         verts[i+j] -= offset[j]
-    
 
   setDragOffset: (e) => @mouseOffset = {x: e.x, y: e.y}
   onDragMove: (e) =>
@@ -225,7 +223,7 @@ class window.Viewer
   onMouseWheel: (e) =>
     maxDistance = 100
     @position.z = Math.max -maxDistance, Math.min 0.001, @position.z - 20*e.wheel*(@position.z/maxDistance)
-    
+
     @update()
     @requestRender()
 

@@ -10,8 +10,9 @@
 #= require o3dExtensions
 #= require p3d
 #= require viewer
+#= require slider
 
-P3D.debug = true
+#P3D.debug = true
 
 $ ->
 
@@ -62,10 +63,31 @@ $ ->
 
       # Testing
       openPrintJobModal ["/ultimaker_platform.stl"]
-      $canvas.viewer "scale", 0.5
+      #$canvas.viewer "scale", 0.5
+
+
+      # Model Scaling
+      $scaleVal = $(".scale-val")
+      $scaleSlider = $modal.find(".scale-slider").slider
+        min: 0.1
+        max: 3
+        val: 1
+        snap: (val) -> val.round(1)
+        onChange: (e, val) ->
+          #val = 1/16 * Math.pow(2,val*10)
+          $scaleVal.val(val).change()
+
+      $scaleVal.on "keyup change", ->
+        val = parseFloat $scaleVal.val()
+        return unless Object.isNumber(val) and val > 0
+        #sliderVal = 16 * Math.log(val) / 10
+        #console.log sliderVal
+        if val != $scaleSlider.slider "val"
+          $scaleSlider.slider "val", val
+        $canvas.viewer "scale", val
 
       # Start the print when the print button is clicked
-      $("#new-print-job-modal .btn-confirm-print-job").on "click", (e) ->
+      $modal.find(".btn-confirm-print-job").on "click", (e) ->
         formData = new FormData $("#new-print-job-modal form")[0]
         console.log formData
         #$.post "/print_jobs/", formData
