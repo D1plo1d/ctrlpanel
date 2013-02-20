@@ -67,7 +67,7 @@ class PrintJobModal
 
     # Show the print dialog when a file is selected
     # TODO: allow multiple file uploads, add pagination to the modal
-    @$files.on "change", => @open()
+    @$modal.on "change", ".cad-files", => @open()
 
     # Model Scaling
     @$scaleSlider.slider
@@ -83,7 +83,7 @@ class PrintJobModal
     @$download.on "click", @_onDownloadClick
 
     # Testing
-    @open ["/ultimaker_platform.stl"]
+    #@open ["/ultimaker_platform.stl"]
 
   _onScaleSliderChange: (e, val) =>
     @$scaleVal.val(val).change()
@@ -124,12 +124,19 @@ class PrintJobModal
     return false
 
   open: (files = @$files[0].files) =>
+    console.log files
     return unless files.length > 0
     $("body").mask("Loading...")
     @$canvas.viewer "loadModel", files[0], @_onModelLoad
 
   _onModelLoad: (@p3d) =>
-    @$modal.find(".local-download-link").html "Download Stl"
+    # Repopulating the $files element so that we can catch change events even when the same
+    # file is selected twice in a row
+    fileHtml = @$files.clone().wrap('<div/>').parent().html()
+    @$files.remove()
+    @$files = $(fileHtml).prependTo @$modal
+
+    @$download.html "Download Stl"
     @$scaleVal.val(1)
     @$scaleVal.trigger "change"
     $("body").unmask()
