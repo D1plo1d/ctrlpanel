@@ -68,23 +68,28 @@
       }
     });
 
-    // Drag handlers
-    var onDragStart = function(e) {
-      dragging = true;
-      if (_isPrevented("dragstart")) return;
-      $doc.on("mousemove", onDrag);
-      $doc.one("mouseup", onDragEnd);
-      e.preventDefault();
-    };
-
-    var onDrag = function(e) {
+    var updateValToMousePos = function(e) {
       var percent = (e.pageX - $el.offset().left)*100/$el.width();
       percent = Math.min( 100, Math.max(0, percent));
       var newVal = opts.snap( percentToVal(percent) )
 
-      if (newVal == opts.val || _isPrevented("change", newVal)) return;
-      setVal(newVal);
+      if (_isPrevented("change", newVal)) return true;
+      if (newVal != opts.val) setVal(newVal);
       e.preventDefault();
+      return true
+    };
+
+    // Drag handlers
+    var onDragStart = function(e) {
+      dragging = true;
+      if (_isPrevented("dragstart")) return;
+      updateValToMousePos(e);
+      $doc.on("mousemove", onDrag);
+      $doc.one("mouseup", onDragEnd);
+    };
+
+    var onDrag = function(e) {
+      updateValToMousePos(e)
     };
 
     var onDragEnd = function(e) {
