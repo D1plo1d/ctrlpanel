@@ -95,10 +95,23 @@ class PrintJobModal
       @$scaleSlider.slider "val", val
     @$canvas.viewer "scale", val
 
+  _exportBlob: ->
+    exportedP3D = @p3d.cloneFromMesh
+      background: false
+      pipeline: ["exportTextStl"]
+      scale: parseFloat @$scaleVal.val()
+    exportedP3D.blob
+
+  _exportURL: ->
+    (window.webkitURL||window.URL).createObjectURL @_exportBlob()
+
+  _onDownloadClick: =>
+    @$download.attr href: @_exportURL(), download: @p3d.filename
+
   _onPrintBtnClick: (e) =>
     formData = new FormData @$form[0]
-    console.log formData
-    #$.post "/print_jobs/", formData
+    formData.append "cadFiles", @_exportBlob(), @p3d.filename
+
     $.ajax
       url: "/print_jobs/"
       type: 'POST'
@@ -106,21 +119,9 @@ class PrintJobModal
       cache: false
       processData : false
       contentType : false
-    console.log e
+
     e.preventDefault()
     return false
-
-  _onDownloadClick: =>
-    exportedP3D = @p3d.cloneFromMesh
-      background: false
-      pipeline: ["exportTextStl"]
-      scale: parseFloat @$scaleVal.val()
-
-    URL = (window.webkitURL||window.URL)
-
-    @$download.attr
-      href: URL.createObjectURL exportedP3D.blob
-      download: @p3d.filename
 
   open: (files = @$files[0].files) =>
     return unless files.length > 0
