@@ -52,7 +52,7 @@ class window.Viewer
     models:
       model:
         display: true
-        #p3d: { background: false }
+        p3d: { background: false }
         scale: ( @mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
       gcodeLines:
@@ -145,7 +145,6 @@ class window.Viewer
 
   _onO3DLoad: (opts, p3d, o3d) =>
     #console.log p3d
-    window.a = p3d.blob if p3d?
     @_alignO3D o3d, opts.alignment if opts.alignment?
     opts.init(o3d) if opts.init?
     #o3d.drawType = @gl.LINES
@@ -165,23 +164,16 @@ class window.Viewer
     @gcodeLines.updateLines()
     @requestRender()
 
-  loadModel: (url, onLoadCallback) => @model.load url, (p3d) =>
+  loadModel: (src, onLoadCallback) => @model.load src, (p3d) =>
     name = p3d.filename.replace("\.[a-zA-Z0-9]+$", ".stl")
-    #console.log p3d
-    $(".local-download-link").attr
-      href: (window.webkitURL||window.URL).createObjectURL p3d.blob
-      download: name
-    $(".local-download-link").html "Download #{p3d.fileType}"
 
     # centering and z-aligning the object on top of the build platform
     @_onO3DLoad alignment: {x: @_center, y: @_center, z: @_bottom}, p3d, @model
-    onLoadCallback?()
+    onLoadCallback? p3d
 
   scale: (val) =>
     val = val * @mmToGLCoords
     @model.scale.set val, val, val
-    #console.log @model.scale
-    @_alignO3D @model, @webGlSettings().models.model.alignment
     @_updateVerticalCentering()
     @update()
     @requestRender()
@@ -200,9 +192,11 @@ class window.Viewer
       for j in [0..2]
         min[j] = verts[i+j] if verts[i+j] < min[j]
         max[j] = verts[i+j] if verts[i+j] > max[j]
+
     model.dimensions = ( max[i] - min[i] for i in [0..2] )
 
     offset = ( max[i]*opts[k][0] + min[i]*opts[k][1] for k, i in ['x','y','z'] )
+
     for i in [0..verts.length-1] by 3
       for j in [0..2]
         verts[i+j] -= offset[j]

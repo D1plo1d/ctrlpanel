@@ -14,7 +14,9 @@ class PhiloGL.O3D.P3DModel extends PhiloGL.O3D.Model
     # Loading the model geometry
     @[k] = p3d[k] for k in ["vertices", "normals"]#, "indices"]
     # Resetting colors (the custom setters in philoGL mean this will re-generate the colors array)
-    @colors = new Float32Array @colors
+    newColors = new Float32Array p3d.vertices.length*4/3
+    newColors[i+j*4] = @colors[i] for i in [0..3] for j in [0..p3d.vertices.length/3]
+    @colors = new Float32Array newColors
 
     @dynamic = realDynamic
     @_loadedP3D = true
