@@ -13,6 +13,9 @@ viewerCount = 0
 
 class window.Viewer
 
+  defaultRotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
+  defaultPosition: new PhiloGL.Vec3(0, -10, -40)
+
   # Configuration and WebGL settings
   initDefaults: =>
     @mode = "gcode" # gcode | mixed | model # (TODO)
@@ -20,9 +23,8 @@ class window.Viewer
     @buildVolume = [210, 210, 220]
     @mmToGLCoords = 0.1
 
-    @rotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-    @position = new PhiloGL.Vec3(0, -10, -40)
-    #@position = new PhiloGL.Vec3(0, 0, -70)
+    @[k] = new PhiloGL.Vec3() for k in ["rotation", "position"]
+    @resetView()
 
   o3dDefaults:
     class: PhiloGL.O3D.P3DModel
@@ -52,7 +54,7 @@ class window.Viewer
     models:
       model:
         display: true
-        p3d: { background: false }
+        #p3d: { background: false }
         scale: ( @mmToGLCoords for i in [0..2] )
         colors: [32/255, 77/255, 37/255, 1]
       gcodeLines:
@@ -153,7 +155,6 @@ class window.Viewer
       @_updateVerticalCentering()
     @scene.add o3d
     @update()
-    @requestRender()
 
   _updateVerticalCentering: ->
     @position.y = -(@model.dimensions?[2] * @model.scale[2]||0)/2
@@ -176,7 +177,6 @@ class window.Viewer
     @model.scale.set val, val, val
     @_updateVerticalCentering()
     @update()
-    @requestRender()
 
   _center: [0.5, 0.5]
   _bottom: [0, 1]
@@ -212,14 +212,19 @@ class window.Viewer
     rot.x = Math.max Math.PI, Math.min(rot.x, Math.PI*2)
 
     @update()
-    @requestRender()
 
   onMouseWheel: (e) =>
     maxDistance = 100
-    @position.z = Math.max -maxDistance, Math.min 0.001, @position.z - 20*e.wheel*(@position.z/maxDistance)
+    @setZoom Math.max -maxDistance, Math.min 0.001, @position.z - 20*e.wheel*(@position.z/maxDistance)
 
+  resetView: (update) =>
+    @rotation[k] = @defaultRotation[k] for k in ["x", "y", "z"]
+    @position[k] = @defaultPosition[k] for k in ["x", "y", "z"]
     @update()
-    @requestRender()
+
+  setZoom: (zoom) ->
+    @position.z = zoom
+    @update()
 
   resize: () =>
     @size =
@@ -254,11 +259,13 @@ class window.Viewer
     setTimeout @render, 1000/40
     #requestAnimationFrame @render
 
-  update: (t, r) -> for model in [@platform, @gcodeLines, @cube, @arMarker, @model]
-    continue unless model?
-    model.rotation = @rotation
-    model.position = @position
-    model.update()
+  update: (t, r) -> 
+    for model in [@platform, @gcodeLines, @cube, @arMarker, @model]
+      continue unless model?
+      model.rotation = @rotation
+      model.position = @position
+      model.update()
+    @requestRender()
 
   renderLines: => if @gcodeLines.vertices.length > 0
     return

@@ -126,7 +126,7 @@ class PrintJobModal
   open: (files = @$files[0].files) =>
     console.log files
     return unless files.length > 0
-    $("body").mask("Loading...")
+    $("body").mask("Loading...", 700)
     @$canvas.viewer "loadModel", files[0], @_onModelLoad
 
   _onModelLoad: (@p3d) =>
@@ -141,5 +141,7 @@ class PrintJobModal
     @$scaleVal.trigger "change"
     $("body").unmask()
     @$modal.removeClass("hide").show().modal("show")
+
+    @$canvas.viewer "resetView"
     @$canvas.viewer "resize"
 
