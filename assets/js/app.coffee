@@ -59,7 +59,7 @@ class PrintJobModal
 
     @[k] = @$modal.find selector for k, selector of elements
 
-    @$canvas.viewer onLoad: @_onViewerLoad
+    @$canvas.viewer onLoad: @_onViewerLoad, defaultZoom: -40
 
   _onViewerLoad: =>
     # Show the file dialog when the new print job button is clicked

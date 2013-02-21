@@ -13,9 +13,6 @@ viewerCount = 0
 
 class window.Viewer
 
-  defaultRotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-  defaultPosition: new PhiloGL.Vec3(0, -10, -60)
-
   # Configuration and WebGL settings
   initDefaults: =>
     @mode = "gcode" # gcode | mixed | model # (TODO)
@@ -23,8 +20,8 @@ class window.Viewer
     @buildVolume = [210, 210, 220]
     @mmToGLCoords = 0.1
 
-    @[k] = new PhiloGL.Vec3() for k in ["rotation", "position"]
-    @resetView()
+    @defaultRotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
+    @defaultPosition = new PhiloGL.Vec3(0, -10, -60)
 
   o3dDefaults:
     class: PhiloGL.O3D.P3DModel
@@ -91,6 +88,11 @@ class window.Viewer
 
   constructor: ($container, @opts) ->
     @initDefaults()
+
+    @defaultPosition.z = @opts.defaultZoom if @opts.defaultZoom?
+    @[k] = new PhiloGL.Vec3() for k in ["rotation", "position"]
+    @resetView()
+
     @$glCanvas = $ $("<canvas id='webGlCanvas#{viewerCount++}'></canvas>")
     $container.prepend @$glCanvas
     @$glCanvas.on "mousewheel", (e) -> e.preventDefault()
@@ -152,12 +154,14 @@ class window.Viewer
     #o3d.drawType = @gl.LINES
     o3d.update()
     if o3d == @model
+      console.log "model loaded"
+      console.log o3d.dimensions
       @_updateVerticalCentering()
     @scene.add o3d
     @update()
 
-  _updateVerticalCentering: ->
-    @position.y = -(@model.dimensions?[2] * @model.scale[2]||0)/2
+  _updateVerticalCentering: -> if @model? and @model.dimensions?
+    @position.y = -(@model.dimensions[2] * @model.scale[2]||0)/2
 
   setGCode: (gcode) ->
     # GCode parsing
@@ -220,6 +224,7 @@ class window.Viewer
   resetView: (update) =>
     @rotation[k] = @defaultRotation[k] for k in ["x", "y", "z"]
     @position[k] = @defaultPosition[k] for k in ["x", "y", "z"]
+    @_updateVerticalCentering()
     @update()
 
   setZoom: (zoom) ->
