@@ -9,8 +9,9 @@ block sublayout
           // Navigation
           .pull-right
             ul.nav.nav-pills
-              // each tab, i in ['print_queue', 'manual_ctrl', 'settings']
-              each tab, i in ['print_queue']
+              //each tab, i in ['print_queue', 'manual_ctrl', 'settings']
+              each tab, i in ['print_queue', 'manual_ctrl']
+                //each tab, i in ['print_queue']
                 li(class='#{i == 0? 'active' : ''}')
                   a(href= '##{tab}', data-toggle="pill", class="#{tab}_nav")= tab.titleize()
           // Title

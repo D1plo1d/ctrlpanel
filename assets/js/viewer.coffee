@@ -14,7 +14,7 @@ viewerCount = 0
 class window.Viewer
 
   defaultRotation: new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
-  defaultPosition: new PhiloGL.Vec3(0, -10, -40)
+  defaultPosition: new PhiloGL.Vec3(0, -10, -60)
 
   # Configuration and WebGL settings
   initDefaults: =>
