@@ -14,6 +14,7 @@ app = express()
 app.use express.compress()
 # Add Connect Assets
 isProduction = process.env.NODE_ENV == 'production'
+console.log "Node ENV: #{process.env.NODE_ENV}"
 app.use assets build: false, src: if isProduction then "builtAssets" else "assets"
 
 # Set the public folder as static assets

@@ -103,4 +103,4 @@
 
     return $el;
   };
-})(jQuery)
+})(jQuery);

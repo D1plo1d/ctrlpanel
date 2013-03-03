@@ -27,6 +27,8 @@ app.use(express.compress());
 
 isProduction = process.env.NODE_ENV === 'production';
 
+console.log("Node ENV: " + process.env.NODE_ENV);
+
 app.use(assets({
   build: false,
   src: isProduction ? "builtAssets" : "assets"
