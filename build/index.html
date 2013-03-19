@@ -1,0 +1,222 @@
+<!DOCTYPE html><!--if lt IE 7 ]><html class="ie ie6" lang="en">--><!--if IE 7 ]><html class="ie ie7" lang="en">--><!--if IE 8 ]><html class="ie ie8" lang="en">--><!-- [if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]--><head><meta charset="utf-8"><title>Ctrl Panel</title><meta name="description" content=""><meta name="author" content=""><!-- Mobile Specific--><meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- CSS--><link href="/css/app.js" media="all" rel="stylesheet" type="text/css"></head><body><div id="main-container"><!-- Header--><header class="container"><div class="row"><div class="span12"><!-- Navigation--><div class="pull-right"><ul class="nav nav-pills"><!--each tab, i in ['print_queue', 'manual_ctrl', 'settings']--><!--each tab, i in ['print_queue']--><li class="active"><a href="#print_queue" data-toggle="pill" class="print_queue_nav">Print Queue</a></li><!--each tab, i in ['print_queue']--><li class=""><a href="#manual_ctrl" data-toggle="pill" class="manual_ctrl_nav">Manual Ctrl</a></li></ul></div><!-- Title--><h1>Ctrl Panel <span class="name">Ultimaker 2</span></h1></div></div></header><!-- Body--><div class="content container"><div class="row"><div class="span12"><div class="tab-content"><div id="print_queue" class="tab-pane active"><table class="table table-striped"><thead><tr><th></th><th></th><th>Qty</th></tr></thead><tbody><tr><td>Prusa Mendel Bottom Vertex</td><td> </td><td>4</td></tr><tr><td>Prusa Mendel Top Vertex</td><td> </td><td>2</td></tr><tr><td>Prusa Mendel Y Carriage</td><td> </td><td>1</td></tr></tbody></table></div><div id="manual_ctrl" class="tab-pane"><div class="side-panel"><div data-axis="xy" class="jog-panel"><h4><a href="#" class="pull-right"><i class="icon-chevron-right"></i></a><div class="subtitle pull-right"></div><i class="icon-fullscreen"></i><span class="title">XY Jog</span></h4><div class="directional-pad"><div data-direction='-1' data-axis="y" class="btn btn-large btn-up"><i class="icon-arrow-up"></i></div><div data-direction='-1' data-axis="x" class="btn btn-large btn-left"><i class="icon-arrow-left"></i></div><div data-direction='1' data-axis="x" class="btn btn-large btn-right"><i class="icon-arrow-right"></i></div><div data-direction='1' data-axis="y" class="btn btn-large btn-down"><i class="icon-arrow-down"></i></div></div><div class="settings-popover hide"><div class="form"><div class="control-group"><div class="control-label">Distance</div><div class="controls input-append"><input type="text" value="1" class="jog-distance"><span class="add-on">mm</span></div></div><div class="control-group"><div class="control-label">Movement Speed</div><div class="controls input-append"><input type="text" value="1" class="jog-speed"><span class="add-on">mm/s</span></div></div></div></div></div><div data-axis="z" class="jog-panel"><h4><a href="#" class="pull-right"><i class="icon-chevron-right"></i></a><div class="subtitle pull-right"></div><i class="icon-resize-vertical"></i><span class="title">Z Jog</span></h4><div class="directional-pad"><div data-direction='-1' data-axis="z" class="btn btn-large btn-up"><i class="icon-arrow-up"></i></div><div data-direction='1' data-axis="z" class="btn btn-large btn-down"><i class="icon-arrow-down"></i></div></div><div class="settings-popover hide"><div class="form"><div class="control-group"><div class="control-label">Distance</div><div class="controls input-append"><input type="text" value="1" class="jog-distance"><span class="add-on">mm</span></div></div><div class="control-group"><div class="control-label">Movement Speed</div><div class="controls input-append"><input type="text" value="1" class="jog-speed"><span class="add-on">mm/s</span></div></div></div></div></div><div class="temperature-panel"><h4><a href="#" class="pull-right"><i class="icon-chevron-right"></i></a><i class="icon-bar-chart"></i><span class="title">Temperature Control</span></h4><div class="side-row"><div class="toggle-btn pull-right"><input type="checkbox"></div><div class="subtitle pull-right">178 / 180&degC</div><div class="title">PLA Extruder</div></div><div class="side-row"><div class="toggle-btn pull-right"><input type="checkbox"></div><div class="subtitle pull-right">178 / 180&degC</div><div class="title">ABS Extruder</div></div><div class="side-row"><div class="toggle-btn pull-right"><input type="checkbox"></div><div class="subtitle pull-right">178 / 180&degC</div><div class="title">Platform</div></div><div class="settings-popover hide"><div class="control-group"><div class="control-label">PLA Extruder</div><div class="controls input-append"><input type="text" value="0"><span class="add-on">&deg;C</span></div><div class="control-label">ABS Extruder</div><div class="controls input-append"><input type="text" value="0"><span class="add-on">&deg;C</span></div><div class="control-label">Platform</div><div class="controls input-append"><input type="text" value="0"><span class="add-on">&deg;C</span></div></div></div></div><!--mixin extruders_panel--></div><div class="canvas-container"></div><script id="shader-vs" type="x-shader/x-vertex">//#define POINT_LIGHTS // enable this if your scene includes point light sources
+#define DIRECTIONAL_LIGHT // enable this if your scene includes a directional light source
+//#define TEXTURES
+#define LIGHT_MAX 4 // the number of point lights in your scene
+
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec4 color;
+
+#ifdef TEXTURES
+  attribute vec2 texCoord1;
+#endif
+
+uniform mat4 worldMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 worldInverseTransposeMatrix;
+
+uniform bool enableLights;
+uniform vec3 ambientColor;
+
+#ifdef DIRECTIONAL_LIGHT
+  uniform vec3 directionalColor;
+  uniform vec3 lightingDirection;
+#endif
+
+#ifdef POINT_LIGHTS
+  uniform vec3 pointLocation[LIGHT_MAX];
+  uniform vec3 pointColor[LIGHT_MAX];
+  uniform int numberPoints;
+#endif
+
+varying vec4 vColor;
+varying vec2 vTexCoord;
+varying vec3 lightWeighting;
+
+void main(void) {
+  vec4 mvPosition = worldMatrix * vec4(position, 1.0);
+
+  if(!enableLights) {
+    lightWeighting = vec3(1.0, 1.0, 1.0);
+  } else {
+    vec3 plightDirection;
+    vec3 pointWeight = vec3(0.0, 0.0, 0.0);
+    vec4 transformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+
+    #ifdef DIRECTIONAL_LIGHT
+      float directionalLightWeighting = max(dot(transformedNormal.xyz, lightingDirection), 0.0);
+    #endif
+
+    #ifdef POINT_LIGHTS
+      for (int i = 0; i < LIGHT_MAX; i++) {
+        if (i < numberPoints) {
+          plightDirection = normalize((viewMatrix * vec4(pointLocation[i], 1.0)).xyz - mvPosition.xyz);
+          pointWeight += max(dot(transformedNormal.xyz, plightDirection), 0.0) * pointColor[i];
+        } else {
+          break;
+        }
+      }
+    #endif
+
+    #ifdef DIRECTIONAL_LIGHT
+      lightWeighting = ambientColor + (directionalColor * directionalLightWeighting) + pointWeight;
+    #else
+      lightWeighting = ambientColor + pointWeight;
+    #endif
+  }
+
+  vColor = color;
+
+  #ifdef TEXTURES
+    vTexCoord = texCoord1;
+  #else
+    vTexCoord = vec2(0.0, 0.0);
+  #endif
+
+  gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
+}</script>
+<script id="shader-fs" type="x-shader/x-fragment">#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec4 vColor;
+varying vec2 vTexCoord;
+varying vec3 lightWeighting;
+
+uniform bool hasTexture1;
+uniform sampler2D sampler1;
+
+uniform bool enablePicking;
+uniform vec3 pickColor;
+
+uniform bool hasFog;
+uniform vec3 fogColor;
+
+uniform float fogNear;
+uniform float fogFar;
+
+void main(){
+  
+  if(!hasTexture1) {
+    gl_FragColor = vec4(vColor.rgb * lightWeighting, vColor.a);
+  } else {
+    gl_FragColor = vec4(texture2D(sampler1, vec2(vTexCoord.s, vTexCoord.t)).rgb * lightWeighting, 1.0);
+  }
+
+  if(enablePicking) {
+    gl_FragColor = vec4(pickColor, 1.0);
+  }
+  
+  /* handle fog */
+  if (hasFog) {
+    float depth = gl_FragCoord.z / gl_FragCoord.w;
+    float fogFactor = smoothstep(fogNear, fogFar, depth);
+    gl_FragColor = mix(gl_FragColor, vec4(fogColor, gl_FragColor.w), fogFactor);
+  }  
+
+}</script>
+<script id="per-fragment-lighting-vs" type="x-shader/x-vertex">//#define TEXTURES
+
+attribute vec3 position;
+attribute vec3 normal;
+
+#ifdef TEXTURES
+attribute vec2 texCoord1;
+#endif
+attribute vec4 color;
+
+uniform mat4 worldMatrix;
+uniform mat4 projectionMatrix;
+uniform mat4 worldInverseTransposeMatrix;
+
+#ifdef TEXTURES
+varying vec2 vTextureCoord;
+#endif
+
+varying vec4 vTransformedNormal;
+varying vec4 vPosition;
+varying vec4 vColor;
+
+
+void main(void) {
+  vPosition = worldMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * vPosition;
+  #ifdef TEXTURES
+    vTextureCoord = texCoord1;
+  #endif
+  vTransformedNormal = worldInverseTransposeMatrix * vec4(normal, 1.0);
+
+  vColor = color;
+}
+</script>
+<script id="per-fragment-lighting-fs" type="x-shader/x-fragment">//#define TEXTURES
+#define DIRECTIONAL_LIGHT // enable this if your scene includes a directional light source
+//#define POINT_LIGHTS // enable this if your scene includes point light sources
+
+#ifdef GL_ES
+  precision highp float;
+#endif
+
+#ifdef TEXTURES
+  varying vec2 vTextureCoord;
+#endif
+
+varying vec4 vTransformedNormal;
+varying vec4 vPosition;
+
+#ifdef TEXTURES
+  uniform bool hasTexture1;
+#else
+  varying vec4 vColor;
+#endif
+
+uniform mat4 viewMatrix;
+uniform bool enableLights;
+uniform vec3 ambientColor;
+
+#ifdef DIRECTIONAL_LIGHT
+  uniform vec3 directionalColor;
+  uniform vec3 lightingDirection;
+#endif
+
+#ifdef POINT_LIGHTS
+  uniform vec3 pointLocation[1];
+  uniform vec3 pointColor[1];
+#endif
+
+uniform sampler2D sampler1;
+
+void main(void) {
+  vec3 lightWeighting;
+  if (!enableLights) {
+    lightWeighting = vec3(1.0, 1.0, 1.0);
+  } else {
+    #ifdef POINT_LIGHTS
+      vec3 lightDirection = normalize((viewMatrix * vec4(pointLocation[0], 1.0)).xyz - vPosition.xyz);
+    #endif
+
+    #ifdef DIRECTIONAL_LIGHT
+      vec3 pointWeight = vec3(0.0, 0.0, 0.0);
+      float directionalLightWeighting = max(dot(vTransformedNormal.xyz, lightingDirection), 0.0);
+      lightWeighting = ambientColor + (directionalColor * directionalLightWeighting) + pointWeight;
+    #else
+      float directionalLightWeighting = max(dot(normalize(vTransformedNormal.xyz), lightDirection), 0.0);
+      lightWeighting = ambientColor + pointColor[0] * directionalLightWeighting;
+    #endif
+
+  }
+
+  vec4 fragmentColor;
+  #ifdef TEXTURES
+  if (hasTexture1) {
+    fragmentColor = texture2D(sampler1, vec2(vTextureCoord.s, vTextureCoord.t));
+  } else {
+  #endif
+    fragmentColor = vColor;// vec4(1.0, 1.0, 1.0, 1.0);
+  #ifdef TEXTURES
+  }
+  #endif
+  gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+}
+</script></div><div id="settings" class="tab-pane">Settings<div class="form form-inline pull-right"><label class="radio inline"><input type="radio" name="units-radio" value="mm">Inches</label><label class="radio inline"><input type="radio" name="units-radio" value="inches">Millimeters</label></div><h3>Units</h3></div></div></div></div></div><!-- Footer--><footer class="container"><div class="row"><div class="span12"><div class="pull-right"><a href="#" class="btn-new-print-job btn"><i class="icon-plus"></i>Print Job</a></div></div></div></footer></div><!-- TODO: this will need to be positioned offscreen rather then hidden for everything to work--><!--#new-print-job-modal.modal.fade--><div id="new-print-job-modal" class="modal fade hide"><!-- This grabs the user's cad file from the OS's open file dialog for processing in js--><input type="file" name="cadFiles" class="cad-files hide"><div class="flex-container"><div class="modal-body"><div class="canvas-container"></div><div class="options"><h3>Print Options</h3><form method="post" action="/print_jobs/" enctype="multipart/form-data" class="form form-horizontal"><div class="control-group"><div class="control-label">Scale</div><div class="controls"><input type="number" value="1" step="0.1" class="scale-val"><div class="scale-slider"></div></div></div></form><a href="#" class="local-download-link pull-right">Download STL</a></div></div><div class="modal-footer"><a href="#" data-dismiss="modal" aria-hidden class="btn">Cancel</a><a href="#" data-dismiss="modal" aria-hidden class="btn-confirm-print-job btn btn-primary">3D Print</a></div></div></div><script type="text/javascript" src="/js/app.js"></script></body></html>

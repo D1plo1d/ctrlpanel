@@ -12,13 +12,13 @@ head
   meta(name="viewport", content="width=device-width, initial-scale=1.0")
 
   // CSS
-  != css('app')
+  != css('/css/app.js')
 
 body
   block sublayout
 
   include ./modals/new_print_job
 
-  != js('app')
+  != js('/js/app.js')
 
 | </html>

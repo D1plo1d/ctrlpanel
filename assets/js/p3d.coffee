@@ -96,7 +96,7 @@ if !isWorker
     return _webWorkerURL if _webWorkerURL?
     # Removing the closure from the worker's js because it caused syntax issues in chrome 24
     str = webWorkerFn.toString()
-    str = str.replace(/^\s*function\s*\(\) {/, "").replace(/}\s*$/, '')
+    str = str.replace(/^\s*function\s*\(\)\s*{/, "").replace(/}\s*$/, '')
 
     webWorkerBlob = new Blob [str], type: "text/javascript"
     _webWorkerURL = (window.URL || window.webkitURL).createObjectURL webWorkerBlob

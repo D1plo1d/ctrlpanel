@@ -23,6 +23,8 @@ class window.Viewer
     @defaultRotation = new PhiloGL.Vec3(Math.PI*3/2+0.2, 0, 0)
     @defaultPosition = new PhiloGL.Vec3(0, -10, -60)
 
+    @modelRotation = new PhiloGL.Vec3(0, 0, 0)
+
   o3dDefaults:
     class: PhiloGL.O3D.P3DModel
     uniforms:
@@ -174,12 +176,18 @@ class window.Viewer
 
     # centering and z-aligning the object on top of the build platform
     @_onO3DLoad alignment: {x: @_center, y: @_center, z: @_bottom}, p3d, @model
+    @modelRotation.set 0, 0, 0
     onLoadCallback? p3d
 
   scale: (val) =>
     val = val * @mmToGLCoords
     @model.scale.set val, val, val
     @_updateVerticalCentering()
+    @update()
+
+  rotate: (x,y,z) =>
+    @modelRotation.set x, y, z
+    console.log @modelRotation
     @update()
 
   _center: [0.5, 0.5]
@@ -264,12 +272,17 @@ class window.Viewer
     setTimeout @render, 1000/40
     #requestAnimationFrame @render
 
-  update: (t, r) -> 
+  update: (t, r) ->
     for model in [@platform, @gcodeLines, @cube, @arMarker, @model]
       continue unless model?
       model.rotation = @rotation
       model.position = @position
       model.update()
+    if @model?
+      r = (@rotation[k] + @modelRotation[k] for k in ['x', 'y', 'z'])
+      @model.rotation = PhiloGL.Vec3.$rotateXYZ @rotation.clone(), r[0], r[1], r[2]
+      @model.update()
+      console.log @model.rotation
     @requestRender()
 
   renderLines: => if @gcodeLines.vertices.length > 0

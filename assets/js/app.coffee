@@ -83,7 +83,8 @@ class PrintJobModal
     @$download.on "click", @_onDownloadClick
 
     # Testing
-    #@open ["/ultimaker_platform.stl"]
+    console.log "moo"
+    @open ["/ultimaker_platform.stl"]
 
   _onScaleSliderChange: (e, val) =>
     @$scaleVal.val(val).change()
@@ -144,4 +145,5 @@ class PrintJobModal
 
     @$canvas.viewer "resetView"
     @$canvas.viewer "resize"
+    @$canvas.viewer "rotate", Math.PI, Math.PI*3/2, Math.PI*3/2
 
