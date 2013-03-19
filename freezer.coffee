@@ -72,10 +72,10 @@ class ViewContext
   constructor: (@freezer) ->
 
   css: (f) ->
-    "<link href=\"#{f}\" media=\"all\" rel=\"stylesheet\" type=\"text/css\">"
+    "<link href=\"./#{f}\" media=\"all\" rel=\"stylesheet\" type=\"text/css\">"
 
   js: (f) ->
-    "<script type=\"text/javascript\" src=\"#{f}\"></script>"
+    "<script type=\"text/javascript\" src=\"./#{f}\"></script>"
 
 module.exports = class Freezer extends EventEmitter
   defaults:
@@ -84,6 +84,7 @@ module.exports = class Freezer extends EventEmitter
     views: "assets/views"
     js: "assets/js"
     css: "assets/css"
+    public: "public"
     minify: process.env.NODE_ENV == 'production'
     compile: [ 'index.html', 'app.js', 'app.css', 'background.js' ]
     servers: [ 'production', 'staging' ]
@@ -112,12 +113,26 @@ module.exports = class Freezer extends EventEmitter
       fs.mkdirpSync dir
       watch.watchTree dir, {ignoreDotFiles: true, interval: 300}, @_onFileChange
     @log.reset()
+    @_onFileChange("a", "b", "c")
+    @_cpPublic()
 
   _onFileChange: (f, prev, next) => if prev? or next?
     @log.reset()
     @log.announce "#{path.basename f} changed"
     @_buildAssets(false)
     @_buildViews()
+
+  _cpPublic: ->
+    @log.start "Copying public"
+    
+    glob path.join(@opts.root, @opts.public, "**", "*"), (e, files) => if files? and files.length > 0
+      for f in files
+        out = path.join @opts.buildDir, path.relative(path.join(@opts.root, @opts.public), f)
+        if fs.existsSync(path.dirname(out)) == false
+          fs.mkdirpSync "#{path.dirname(out)}/"
+        unless fs.statSync(f).isDirectory()
+          fs.createReadStream(f).pipe(fs.createWriteStream(out))
+      @log.end "Copying public"
 
   _buildAssets: (minify) ->
     onlyAssets = (f) -> _s.endsWith(f, ".js") or _s.endsWith(f, ".css")

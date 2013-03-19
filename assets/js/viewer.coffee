@@ -280,7 +280,7 @@ class window.Viewer
       model.update()
     if @model?
       r = (@rotation[k] + @modelRotation[k] for k in ['x', 'y', 'z'])
-      @model.rotation = PhiloGL.Vec3.$rotateXYZ @rotation.clone(), r[0], r[1], r[2]
+      #@model.rotation = PhiloGL.Vec3.$rotateXYZ @rotation.clone(), r[0], r[1], r[2]
       @model.update()
       console.log @model.rotation
     @requestRender()
