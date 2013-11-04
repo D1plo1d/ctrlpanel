@@ -113,12 +113,12 @@ module.exports = class Freezer extends EventEmitter
       fs.mkdirpSync dir
       watch.watchTree dir, {ignoreDotFiles: true, interval: 300}, @_onFileChange
     @log.reset()
-    @_onFileChange("a", "b", "c")
+    @_onFileChange(null, "b", "c")
     @_cpPublic()
 
   _onFileChange: (f, prev, next) => if prev? or next?
     @log.reset()
-    @log.announce "#{path.basename f} changed"
+    @log.announce "#{path.basename f} changed" if f?
     @_buildAssets(false)
     @_buildViews()
 

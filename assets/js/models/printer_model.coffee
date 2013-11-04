@@ -1,3 +1,5 @@
+#= require ../vendor/backbone-min
+
 class window.PrinterModel extends Backbone.Model
 
   defaults:

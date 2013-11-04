@@ -11,10 +11,21 @@
 #= require p3d
 #= require viewer
 #= require slider
+#= require mdns
 
 P3D.debug = true
 
+
+# $ ->
+#   console.log "Starting MDNS!!"
+#   mdns = new MDNS (err) ->
+#     console.log mdns
+#     console.log err
+
+
 $ ->
+
+  #return false
 
   $(".toggle-btn").toggleButtons(width: 70)
 
@@ -41,6 +52,7 @@ $ ->
 
   #else
   if true
+  # if false
     new PrintJobModal()
 
 
@@ -84,7 +96,7 @@ class PrintJobModal
 
     # Testing
     console.log "moo"
-    @open ["/ultimaker_platform.stl"]
+    # @open ["/ultimaker_platform.stl"]
 
   _onScaleSliderChange: (e, val) =>
     @$scaleVal.val(val).change()
